@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<TransformationList>
+<Transformation>
+<Type>linear</Type>
+<Inversion>0</Inversion>
+<Path>/home/ricky/mri/tools/identityTransform.txt</Path>
+</Transformation>
+</TransformationList>
