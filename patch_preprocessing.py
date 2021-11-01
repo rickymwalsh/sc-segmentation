@@ -30,7 +30,7 @@ def extract_patches(subj_dir='', results_dir=None, ctr_algo='svm', patch_size=(4
     
     fnames = {'t2s': 't2sMerge_iso.nii.gz', 
               't2': 't2_iso_onT2srig_nl.nii.gz',
-              'lesion': 'labelLesion_iso.nii.gz'
+              'lesion': 'labelLesion_iso_bin.nii.gz'
               }
     
     fpaths = {f: os.path.join(subj_dir, fnames[f]) for f in fnames}

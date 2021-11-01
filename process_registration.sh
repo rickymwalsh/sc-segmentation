@@ -13,10 +13,16 @@ sct_crop_image -i t2sMerge.nii.gz -m mask_t2sMerge.nii.gz -o t2sMerge_crop.nii.g
 # Resample the cropped t2s image to isotropic voxel dimensions of size 0.5mm
 sct_resample -i t2sMerge_crop.nii.gz -mm 0.5x0.5x0.5 -o res/t2sMerge_iso.nii.gz
 
+# Binarise the lesion masks. Originally they are the labelled with the number of the lesion.
+animaThrImage -i labelLesion.nii.gz -o labelLesion_bin.nii.gz -t 0.5
+
 # Map the t2 image into cropped isotropic T2* image. This converts the T2 to isotropic and crops it to the same region.
 animaApplyTransformSerie -i t2.nii.gz -g res/t2sMerge_iso.nii.gz -o res/t2_iso.nii.gz -t ~/mri/tools/identityTr.xml
 # Do the same for the image with lesion masks (already in T2* space, but want to convert to isotropic and crop).
-animaApplyTransformSerie -i labelLesion.nii.gz -g res/t2sMerge_iso.nii.gz -o res/labelLesion_iso.nii.gz -t ~/mri/tools/identityTr.xml
+animaApplyTransformSerie -i labelLesion_bin.nii.gz -g res/t2sMerge_iso.nii.gz -o res/labelLesion_iso.nii.gz -t ~/mri/tools/identityTr.xml
+
+# The above transformation causes interpolation and values between 0 and 1. Threshold the lesion masks to obtain binary values again.
+animaThrImage -i res/labelLesion_iso.nii.gz -o res/labelLesion_iso_bin.nii.gz -t 0.5
 
 # Create a binary mask specifying where the intensities are zero or non-zero. This will be used to specify the region used to calculate the transformations below.
 animaThrImage -i res/t2sMerge_iso.nii.gz -o res/t2sMerge_iso_mask.nii.gz -t 0.0
