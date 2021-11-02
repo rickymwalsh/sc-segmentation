@@ -9,11 +9,12 @@ import os
 import logging
 import warnings
 import argparse
+from copy import deepcopy
 
 import numpy as np
 
 from spinalcordtoolbox.image import Image
-from spinalcordtoolbox.deepseg_sc.core import find_centerline, crop_image_around_centerline
+from spinalcordtoolbox.deepseg_sc.core import find_centerline, crop_image_around_centerline, deep_segmentation_spinalcord
 
 logger = logging.getLogger(__name__)
 
@@ -49,9 +50,19 @@ def extract_patches(subj_dir='', results_dir=None, ctr_algo='svm', patch_size=(4
     
     ims = {'t2s': Image(fpaths['t2s']),
            't2': Image(fpaths['t2']),
+           't2s_SC': Image(fpaths['t2s']),    # To hold the masked Spinal Cord
+           't2_SC': Image(fpaths['t2']),
            'lesion': Image(fpaths['lesion'])
            }
     
+    # Obtain masks for the spinal cord.
+    sc_seg_t2s, _, _ =  deep_segmentation_spinalcord(ims['t2s'], 't2s', brain_bool=False, kernel_size='2d')
+    sc_seg_t2, _, _  =  deep_segmentation_spinalcord(ims['t2'], 't2', brain_bool=False, kernel_size='2d')
+    
+    # Mask using -1 rather than 0 to avoid confusion with regular 0-intensity voxels.
+    ims['t2s_SC'].data[sc_seg_t2s.data == 0] = -1 
+    ims['t2_SC'].data[sc_seg_t2.data == 0] = -1
+        
     # find the spinal cord centerline - execute OptiC binary
     logger.info("\nFinding the spinal cord centerline...")
     _, im_ctl, im_labels_viewer = find_centerline(algo=ctr_algo,
@@ -61,7 +72,7 @@ def extract_patches(subj_dir='', results_dir=None, ctr_algo='svm', patch_size=(4
                                                     folder_output=None,
                                                     remove_temp_files=False,
                                                     centerline_fname=None)
-
+    
     # crop image around the spinal cord centerline
     logger.info("\nCropping the image around the spinal cord...")
     
