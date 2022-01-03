@@ -1,0 +1,11 @@
+include LICENSE
+include setup*
+include README*
+include CHANGES.md
+include abstract.png
+include spinalcordtoolbox/version.txt
+
+graft spinalcordtoolbox/reports/assets
+prune dev
+prune scripts
+prune testing
