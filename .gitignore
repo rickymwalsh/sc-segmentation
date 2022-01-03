@@ -1,12 +1,10 @@
-venv/\
-training_testing/Data\
+venv/
+training_testing/Data
 Logs
-venv_lx/\
-Data/\
-data/\
+venv_lx/
+Data/
+data/
 __pycache__/
-*/__pycache__/
-*/__pycache__/*
 
 # ignores taken from spinalcordtoolbox repo
 spinalcordtoolbox/tmp/**/*
@@ -28,5 +26,5 @@ spinalcordtoolbox_v*
 *.egg
 .eggs/
 .idea/*
-/.cache
+spinalcordtoolbox/.cache
 
