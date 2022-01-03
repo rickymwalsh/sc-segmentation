@@ -1,6 +1,6 @@
 Downloaded from https://github.com/spinalcordtoolbox/deepseg_lesion_models
 Also available after installing the Spinal Cord Toolbox command line tools in the installation folder
-```sct_[version]/data/deepseg_lesion_models```
+	sct_[version]/data/deepseg_lesion_models
 
 sct_deepseg_lesion models
 ===============================================================================
