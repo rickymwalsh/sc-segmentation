@@ -4,6 +4,8 @@ Logs
 venv_lx/
 Data/
 data/
+models/
+results/
 __pycache__/
 
 # ignores taken from spinalcordtoolbox repo
