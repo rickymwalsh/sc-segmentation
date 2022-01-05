@@ -22,9 +22,19 @@ import json
 
 data_dir = os.path.join('data', 'SCSeg')
 
+# Loads the image with Nibabel.
+load_data = lambda fpath: nib.load(fpath).get_fdata()
+
 def dice_coefficient(lesion_gt, lesion_seg):
+    """ Returns the Dice coefficient for one subject given the ground truth lesion mask and segmentation mask for that subject. """
+
+    # If both the ground truth mask and automated segmentation mask contain no positive (lesion) voxels, 
+    # the function will throw an error (division by zero). So first check that this is not the case.
     if any(lesion_seg.ravel()) | any(lesion_gt.ravel()):
+        # the dice function gives Dice dissimilarity - subtract from 1 to the get the Dice coefficient.
         return 1-dice(lesion_gt.ravel(), lesion_seg.ravel())
+    # If neither mask contains any lesion pixels, this is a good result - the model has not returned a false positive lesion.
+    # Thus, return the maximum Dice coefficient score of 1.
     else:
         return 1
 
@@ -35,40 +45,60 @@ def voxel_precision(lesion_gt, lesion_seg):
     return precision_score(lesion_gt.ravel(), lesion_seg.ravel())
 
 def lesion_sensitivity(lesion_gt, lesion_seg):
-    labels_gt = measure.label(lesion_gt)
+    """ Function to return the proportion of ground truth lesions detected.
+    input:  the ground truth lesion mask image and automated segmentation mask for one subject.
+    returns:  lesion_sensitivity for one subject, and the number of distinct ground truth lesions.
+     """
+    labels_gt = measure.label(lesion_gt)  # Numbers the connected regions (1, 2, 3, etc.)
 
+    # Get the unique ground truth lesions (connected regions) and how many voxels each one covers.
     labels, count = np.unique(labels_gt, return_counts=True)
     labels_overlap, count_overlap = np.unique(labels_gt*lesion_seg, return_counts=True)
 
     detected = 0.0
+    # Loop over the distinct ground truth lesions. If part of this lesion is present in the segmentation mask, 
+    #  check if the overlap is over 25% of the lesion voxels. If so, then the ground truth lesion is considered detected.
     for i,label in enumerate(labels):
         if label in labels_overlap:
             if count_overlap[labels_overlap == label]/count[i] > 0.25:
                 detected += 1.0
 
+    # Return the sensitivity, i.e., number of detected lesions divided by the total number of lesions in the ground truth.
+    # Also return the total number of ground truth lesions.
     return detected/len(labels), len(labels)
 
 def lesion_precision(lesion_gt, lesion_seg):
-    labels_seg = measure.label(lesion_seg)
+    """ Function to return the proportion of ground truth lesions detected.
+    input:  the ground truth lesion mask image and automated segmentation mask for one subject.
+    returns:  lesion_sensitivity for one subject, and the number of distinct ground truth lesions.
+     """
+    labels_seg = measure.label(lesion_seg)  # Numbers the connected regions (1, 2, 3, etc.)
 
+    # Get the unique lesions (connected regions) in the automatic segmentation and how many voxels each one covers.
     labels, count = np.unique(labels_seg, return_counts=True)
+    # Get the overlap between the segmentation labels and the ground truth mask.
     labels_overlap, count_overlap = np.unique(labels_seg*lesion_gt, return_counts=True)
 
     TP = 0.0
+    # Loop over the distinct segmentation lesions. If part of this lesion was present in the ground truth mask, 
+    #  check if the overlap is over 25% of the lesion voxels. If so, then the detected lesion is considered valid.
     for i,label in enumerate(labels):
         if label in labels_overlap:
             if count_overlap[labels_overlap == label]/count[i] > 0.25:
                 TP += 1.0
 
+    # Return the precision, i.e., number of valid lesions divided by total number of lesions detected. 
+    # Also return the total number of lesions detected.
     return TP/len(labels), len(labels)
 
-# Loads the image with Nibabel and then flattens to 1 dimension.
-load_data = lambda fpath: nib.load(fpath).get_fdata()
 
-scores = {}
+scores = {}   # Dict to store the results.
 
-for subj in tqdm(os.listdir(data_dir)[0:5]):
+# Loop over each subject.
+for subj in tqdm(os.listdir(data_dir)):
+    # Create the high-level dict structure.
     scores[subj] = {'sct':{'t2':{}, 't2s':{}}, 'finetuned': {}, 'adapted': {}}
+    # Filepaths for the segmentations using the SCT models.
     fpaths = {
         'gt': os.path.join(data_dir, subj, \
                            'final', 'labelLesion_iso_bin.nii.gz'),
@@ -77,45 +107,44 @@ for subj in tqdm(os.listdir(data_dir)[0:5]):
         't2s': os.path.join(data_dir, subj, \
                             'segmentation', 't2sMerge_iso_lesionseg.nii.gz')
         }
-        
-    lesion_gt = load_data(fpaths['gt'])
-    lesion_seg_t2 = load_data(fpaths['t2'])
-    lesion_seg_t2s = load_data(fpaths['t2s'])
+
+    # Load the lesion masks.
+    lesion_gt = load_data(fpaths['gt'])   # Ground Truth
+    lesion_seg_t2 = load_data(fpaths['t2'])     # Automated segmentation of T2 using the T2 model.
+    lesion_seg_t2s = load_data(fpaths['t2s'])    # Automated segmentation of T2* using the T2* model.
     
+    # Calculate and store the Dice scores.
     scores[subj]['sct']['t2']['dice'] = \
         dice_coefficient(lesion_gt, lesion_seg_t2)
     scores[subj]['sct']['t2s']['dice'] = \
         dice_coefficient(lesion_gt, lesion_seg_t2s)
 
+    # Check if there was at least one lesion in the ground truth. Otherwise these metrics don't apply.
     if np.max(lesion_gt):
-        scores[subj]['sct']['t2']['voxel_sensitivity'] = \
-            voxel_sensitivity(lesion_gt, lesion_seg_t2)
-        scores[subj]['sct']['t2s']['voxel_sensitivity'] = \
-            voxel_sensitivity(lesion_gt, lesion_seg_t2s)    
+        # Calculate and store the various metrics per subject.
+        scores[subj]['sct']['t2']['voxel_sensitivity'] = voxel_sensitivity(lesion_gt, lesion_seg_t2)
+        scores[subj]['sct']['t2s']['voxel_sensitivity'] = voxel_sensitivity(lesion_gt, lesion_seg_t2s)    
 
-        scores[subj]['sct']['t2']['voxel_precision'] = \
-            voxel_precision(lesion_gt, lesion_seg_t2)
-        scores[subj]['sct']['t2s']['voxel_precision'] = \
-            voxel_precision(lesion_gt, lesion_seg_t2s)    
+        scores[subj]['sct']['t2']['voxel_precision'] = voxel_precision(lesion_gt, lesion_seg_t2)
+        scores[subj]['sct']['t2s']['voxel_precision'] = voxel_precision(lesion_gt, lesion_seg_t2s)    
 
-        scores[subj]['sct']['t2']['lesion_sensitivity'], nlesions_gt = \
-            lesion_sensitivity(lesion_gt, lesion_seg_t2)
-        scores[subj]['sct']['t2s']['lesion_sensitivity'], _ = \
-            lesion_sensitivity(lesion_gt, lesion_seg_t2s)
+        scores[subj]['sct']['t2']['lesion_sensitivity'], nlesions_gt = lesion_sensitivity(lesion_gt, lesion_seg_t2)
+        scores[subj]['sct']['t2s']['lesion_sensitivity'], _ = lesion_sensitivity(lesion_gt, lesion_seg_t2s)
 
-        scores[subj]['sct']['t2']['lesion_precision'], nlesions_t2 = \
-            lesion_precision(lesion_gt, lesion_seg_t2)
-        scores[subj]['sct']['t2s']['lesion_precision'], nlesions_t2s = \
-            lesion_precision(lesion_gt, lesion_seg_t2s)
+        scores[subj]['sct']['t2']['lesion_precision'], nlesions_t2 = lesion_precision(lesion_gt, lesion_seg_t2)
+        scores[subj]['sct']['t2s']['lesion_precision'], nlesions_t2s = lesion_precision(lesion_gt, lesion_seg_t2s)
 
+        # Record the number of lesions in the ground truth & automated segmentations.
         scores[subj]['nlesions_gt'] = nlesions_gt
         scores[subj]['sct']['t2']['nlesions'] = nlesions_t2
         scores[subj]['sct']['t2s']['nlesions'] = nlesions_t2s
 
     # If there is no lesion in the Ground Truth segmentation file.
     else:
+        # Record the number of lesions as zero.
         scores[subj]['nlesions_gt'] = 0
 
+        # Check if there is at least one lesion returned by the T2 segmentation.
         if np.max(lesion_seg_t2):
             _, nlesions_t2 = measure.label(lesion_seg_t2, return_num=True)
             scores[subj]['sct']['t2']['nlesions'] = nlesions_t2
@@ -125,7 +154,8 @@ for subj in tqdm(os.listdir(data_dir)[0:5]):
             scores[subj]['sct']['t2']['nlesions'] = 0
             scores[subj]['sct']['t2']['true_negative'] = 1  # Used to calculate subject-wise specificity
 
-        if np.max(lesion_seg_t2):
+        # Check if there is at least one lesion returned by the T2* segmentation.
+        if np.max(lesion_seg_t2s):
             _, nlesions_t2s = measure.label(lesion_seg_t2s, return_num=True)
             scores[subj]['sct']['t2s']['nlesions'] = nlesions_t2s
             scores[subj]['sct']['t2s']['true_negative'] = 0  # Used to calculate subject-wise specificity
@@ -133,6 +163,7 @@ for subj in tqdm(os.listdir(data_dir)[0:5]):
         else:
             scores[subj]['sct']['t2s']['nlesions'] = 0
             scores[subj]['sct']['t2s']['true_negative'] = 1  # Used to calculate subject-wise specificity
+
 
 
 with open(os.path.join('results', 'scores.json'), 'w') as f:
@@ -155,8 +186,6 @@ subj_specificity = df[['sct.t2.true_negative', 'sct.t2s.true_negative']] \
         'sct.t2.true_negative': 'sct.t2.subject_specificity',
         'sct.t2s.true_negative': 'sct.t2s.subject_specificity'
         }) 
-
-print(subj_specificity)
 
 summary_stats = df.drop(columns=['subject','sct.t2.true_negative', 'sct.t2s.true_negative'],axis=1) \
     .agg([
