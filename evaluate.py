@@ -15,6 +15,7 @@ import numpy as np
 from scipy.spatial.distance import dice
 from sklearn.metrics import recall_score, precision_score
 from skimage import measure
+import pandas as pd
 import os
 from tqdm import tqdm
 import json
@@ -61,13 +62,12 @@ def lesion_precision(lesion_gt, lesion_seg):
 
     return TP/len(labels), len(labels)
 
-
 # Loads the image with Nibabel and then flattens to 1 dimension.
 load_data = lambda fpath: nib.load(fpath).get_fdata()
 
 scores = {}
 
-for subj in tqdm(os.listdir(data_dir)):
+for subj in tqdm(os.listdir(data_dir)[0:5]):
     scores[subj] = {'sct':{'t2':{}, 't2s':{}}, 'finetuned': {}, 'adapted': {}}
     fpaths = {
         'gt': os.path.join(data_dir, subj, \
@@ -119,13 +119,60 @@ for subj in tqdm(os.listdir(data_dir)):
         if np.max(lesion_seg_t2):
             _, nlesions_t2 = measure.label(lesion_seg_t2, return_num=True)
             scores[subj]['sct']['t2']['nlesions'] = nlesions_t2
+            scores[subj]['sct']['t2']['true_negative'] = 0  # Used to calculate subject-wise specificity
+
+        else:
+            scores[subj]['sct']['t2']['nlesions'] = 0
+            scores[subj]['sct']['t2']['true_negative'] = 1  # Used to calculate subject-wise specificity
 
         if np.max(lesion_seg_t2):
             _, nlesions_t2s = measure.label(lesion_seg_t2s, return_num=True)
             scores[subj]['sct']['t2s']['nlesions'] = nlesions_t2s
+            scores[subj]['sct']['t2s']['true_negative'] = 0  # Used to calculate subject-wise specificity
 
+        else:
+            scores[subj]['sct']['t2s']['nlesions'] = 0
+            scores[subj]['sct']['t2s']['true_negative'] = 1  # Used to calculate subject-wise specificity
 
-print(scores)
 
 with open(os.path.join('results', 'scores.json'), 'w') as f:
     json.dump(scores, f)
+
+# with open(os.path.join('results', 'scores.json'), 'r') as f:
+#     scores = json.load(f)
+
+scores = [{"subject":subj, 'results':values} for subj, values in scores.items()]
+
+df = pd.json_normalize(scores)
+df.columns = df.columns.str.replace('results.', '', regex=False)
+
+# df.to_csv(os.path.join('results', 'subject_scores.csv'), index=False)
+
+subj_specificity = df[['sct.t2.true_negative', 'sct.t2s.true_negative']] \
+    .mean(skipna=True) \
+    .to_frame(name='specificity') \
+    .rename({
+        'sct.t2.true_negative': 'sct.t2.subject_specificity',
+        'sct.t2s.true_negative': 'sct.t2s.subject_specificity'
+        }) 
+
+print(subj_specificity)
+
+summary_stats = df.drop(columns=['subject','sct.t2.true_negative', 'sct.t2s.true_negative'],axis=1) \
+    .agg([
+        np.nanmedian, 
+        lambda x: x.quantile(q=0.25),
+        lambda x: x.quantile(q=0.75)]) \
+    .T 
+
+summary_stats.columns = ['median', 'q25', 'q75']
+
+summary_stats = summary_stats \
+    .append(subj_specificity) \
+    .reset_index()
+
+summary_stats['IQR'] = summary_stats['q75'] - summary_stats['q25']
+
+summary_stats[['model', 'data', 'metric']] = summary_stats['index'].str.split('.', 2, expand=True)
+
+summary_stats.to_csv(os.path.join('results', 'summary_stats.csv'), index=False)
