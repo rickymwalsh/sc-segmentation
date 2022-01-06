@@ -6,7 +6,6 @@ Created on Tue Jan  4 15:06:27 2022
 """
 
 # TODO: 
-#   Add comments
 #   Set up for all experiments/models.
 #   Relate written results to experiment identifier.
 
