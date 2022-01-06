@@ -1,5 +1,5 @@
 import pickle
-from msct_image import Image
+# from msct_image import Image
 import tables
 import numpy as np
 import os
@@ -9,39 +9,31 @@ from scipy.ndimage.measurements import center_of_mass
 from skimage.exposure import rescale_intensity
 from skimage.util.shape import view_as_blocks
 
-from keras import backend as K
-from keras.models import load_model
-from keras.callbacks import ModelCheckpoint, TensorBoard, ReduceLROnPlateau
+# from keras import backend as K
+# from keras.models import load_model
+# from keras.callbacks import ModelCheckpoint, TensorBoard, ReduceLROnPlateau
 
-K.set_image_dim_ordering('th')
+# K.set_image_dim_ordering('th')
 
 
 ################################ LOAD DATA ################################
 
-def fetch_data_files(data_frame, data_fold, im_suffixe, target_suffixe):
-    '''
-    This function assumes the below dataset organization:
-        subject_001/
-            contrast1/
-                contrast1_im_suffixe.nii.gz
-                contrast1_target_suffixe.nii.gz
-            contrast2/
-                contrast2_im_suffixe.nii.gz
-                contrast2_target_suffixe.nii.gz
-        ...etc.
-                
+def fetch_data_files(subjects, data_folder, contrast):
+    '''             
     Input:
-        - data_frame: panda dataframe with at least the 2 following columns: subject, contrast_foldname
-        - data_fold: absolute path of the data folder
-        - im_suffixe: suffixe of the image to process (e.g. _res)
-        - target_suffixe: suffixe of the groundtruth mask (e.g. _res_lesion_manual)
+        - subjects: list of subjects
+        - data_folder: absolute path of the data folder
+        - contrast: 'T2' or 'T2s'
         
-    Output: a list of list, each sublist containing the absolute path of both the image and its related groundtruth
+    Output: a list of tuples, each containing the absolute path of both the image and its related groundtruth
     '''
     data_files = list()
-    for s, c in zip(data_frame.subject.values, data_frame.contrast_foldname.values):
-        im_fname = data_fold + s + '/' + c + '/' + s + im_suffixe + '.nii.gz'
-        gt_fname = data_fold + s + '/' + c + '/' + s + target_suffixe + '.nii.gz'
+
+    fname = {'t2': 't2_iso_onT2srig_nl.nii.gz', 't2s': 't2sMerge_iso.nii.gz', 'lesion': 'labelLesion_iso_bin.nii.gz'}
+
+    for s in subjects:
+        im_fname = os.path.join(data_folder, str(s), 'final', fname[contrast])
+        gt_fname = os.path.join(data_folder, str(s), 'final', fname['lesion'])
         if os.path.isfile(im_fname) and os.path.isfile(gt_fname):
             subject_files = [im_fname, gt_fname]
             data_files.append(tuple(subject_files))
@@ -72,7 +64,7 @@ def load_3Dpatches(fname_lst, patch_shape, overlap=None):
     x_size, y_size, z_size = patch_shape
     X, y = [], []
     for fname in fname_lst:
-        print fname[0]
+        print(fname[0])
         if os.path.isfile(fname[0]) and os.path.isfile(fname[1]):
             im, gt = Image(fname[0]), Image(fname[1])
             if 1 in gt.data:
