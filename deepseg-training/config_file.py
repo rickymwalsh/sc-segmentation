@@ -11,7 +11,7 @@ config["augment_flip"] = True  # if True and augment is True, then the data will
 config["learning_rate_drop"] = 0.5  # How much at which to the learning rate will decay
 config["learning_rate_patience"] = 10  # Number of epochs after which the learning rate will drop
 
-config["gpu_id"] = '6'
+config["gpu_id"] = '-1'
 config["data_dir"] = '../data/SCSeg/'
 # Temporary fix to run the training script **TODO: Create data dict with training subjects.
 config["data_dict"] = '../results/scores.json'  # pickle file containing a dictionary with at least the following keys: subject and contrast_foldname

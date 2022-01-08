@@ -1,5 +1,4 @@
 import pickle
-# from msct_image import Image
 import tables
 import numpy as np
 import os
@@ -9,11 +8,19 @@ from scipy.ndimage.measurements import center_of_mass
 from skimage.exposure import rescale_intensity
 from skimage.util.shape import view_as_blocks
 
-# from keras import backend as K
-# from keras.models import load_model
-# from keras.callbacks import ModelCheckpoint, TensorBoard, ReduceLROnPlateau
+import sys
+from os.path import dirname, abspath, join as oj
+path_to_sct = oj(dirname(dirname(abspath(__file__))), 'spinalcordtoolbox')
+sys.path.append(path_to_sct)
 
-# K.set_image_dim_ordering('th')
+from spinalcordtoolbox.image import Image
+
+from tensorflow.keras import backend as K
+from tensorflow.keras.models import load_model
+from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard, ReduceLROnPlateau
+
+# **TODO** : switch to 'channels_first' when running on GPU.
+K.set_image_data_format('channels_last')
 
 
 ################################ LOAD DATA ################################
@@ -29,11 +36,23 @@ def fetch_data_files(subjects, data_folder, contrast):
     '''
     data_files = list()
 
-    fname = {'t2': 't2_iso_onT2srig_nl.nii.gz', 't2s': 't2sMerge_iso.nii.gz', 'lesion': 'labelLesion_iso_bin.nii.gz'}
+    # fname = {'t2': 't2_iso_onT2srig_nl.nii.gz', 't2s': 't2sMerge_iso.nii.gz', 'lesion': 'labelLesion_iso_bin.nii.gz'}
+
+    # for s in subjects:
+    #     im_fname = os.path.join(data_folder, str(s), 'final', fname[contrast])
+    #     gt_fname = os.path.join(data_folder, str(s), 'final', fname['lesion'])
+    #     if os.path.isfile(im_fname) and os.path.isfile(gt_fname):
+    #         subject_files = [im_fname, gt_fname]
+    #         data_files.append(tuple(subject_files))
+    # return data_files
+
+    fname = {'t2': 'crop_t2.nii.gz', 't2s': 'crop_t2s.nii.gz', 'lesion': 'crop_lesion.nii.gz'}
 
     for s in subjects:
-        im_fname = os.path.join(data_folder, str(s), 'final', fname[contrast])
-        gt_fname = os.path.join(data_folder, str(s), 'final', fname['lesion'])
+        im_fname = os.path.join(
+            '/mnt/c/Users/Ricky/Documents/Masters/Second Year/Case Study/ot_da_v0/Data/SCSeg/', str(s), 'SC/res', fname[contrast])
+        gt_fname = os.path.join(
+            '/mnt/c/Users/Ricky/Documents/Masters/Second Year/Case Study/ot_da_v0/Data/SCSeg/', str(s), 'SC/res', fname['lesion'])
         if os.path.isfile(im_fname) and os.path.isfile(gt_fname):
             subject_files = [im_fname, gt_fname]
             data_files.append(tuple(subject_files))
@@ -67,7 +86,7 @@ def load_3Dpatches(fname_lst, patch_shape, overlap=None):
         print(fname[0])
         if os.path.isfile(fname[0]) and os.path.isfile(fname[1]):
             im, gt = Image(fname[0]), Image(fname[1])
-            if 1 in gt.data:
+            if  np.any(gt.data):
                 im_data, gt_data = im.data.astype(np.float32), gt.data.astype(np.int8)
 
                 z_max = im_data.shape[2]
@@ -149,13 +168,16 @@ def train_model(model, path2save, model_name, training_generator, validation_gen
         - learning_rate_drop: How much at which to the learning rate will decay.
         - learning_rate_patience: Number of epochs after which the learning rate will drop.
     '''
-    model.fit_generator(generator=training_generator,
-                        steps_per_epoch=steps_per_epoch,
-                        epochs=n_epochs,
-                        validation_data=validation_generator,
-                        validation_steps=validation_steps,
-                        use_multiprocessing=True,
-                        callbacks=get_callbacks(path2save, model_name,
-                                               learning_rate_drop=learning_rate_drop,
-                                               learning_rate_patience=learning_rate_patience
-                                               ))
+    model.fit(training_generator,
+                steps_per_epoch=steps_per_epoch,
+                epochs=n_epochs,
+                # validation_data=validation_generator,
+                # validation_steps=validation_steps,
+                # use_multiprocessing=True,
+                # callbacks=get_callbacks(
+                #     path2save, 
+                #     model_name,
+                #     learning_rate_drop=learning_rate_drop,
+                #     learning_rate_patience=learning_rate_patience
+                #     )
+                )

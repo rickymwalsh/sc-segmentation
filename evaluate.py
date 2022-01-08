@@ -99,12 +99,16 @@ for subj in tqdm(os.listdir(data_dir)):
     scores[subj] = {'sct':{'t2':{}, 't2s':{}}, 'finetuned': {}, 'adapted': {}}
     # Filepaths for the segmentations using the SCT models.
     fpaths = {
+        # 'gt': os.path.join(data_dir, subj, \
+        #                    'final', 'labelLesion_iso_bin.nii.gz'),
         'gt': os.path.join(data_dir, subj, \
-                           'final', 'labelLesion_iso_bin.nii.gz'),
+                           'SC', 'labelLesion.nii.gz'),
         't2': os.path.join(data_dir, subj, \
                            'segmentation', 't2_iso_onT2srig_nl_lesionseg.nii.gz'),
+        # 't2s': os.path.join(data_dir, subj, \
+        #                     'segmentation', 't2sMerge_iso_lesionseg.nii.gz')
         't2s': os.path.join(data_dir, subj, \
-                            'segmentation', 't2sMerge_iso_lesionseg.nii.gz')
+                            'segmentation', 't2sMerge_lesionseg.nii.gz')
         }
 
     # Load the lesion masks.
@@ -112,30 +116,30 @@ for subj in tqdm(os.listdir(data_dir)):
     lesion_seg_t2 = load_data(fpaths['t2'])     # Automated segmentation of T2 using the T2 model.
     lesion_seg_t2s = load_data(fpaths['t2s'])    # Automated segmentation of T2* using the T2* model.
     
-    # Calculate and store the Dice scores.
-    scores[subj]['sct']['t2']['dice'] = \
-        dice_coefficient(lesion_gt, lesion_seg_t2)
+    # # Calculate and store the Dice scores.
+    # scores[subj]['sct']['t2']['dice'] = \
+    #     dice_coefficient(lesion_gt, lesion_seg_t2)
     scores[subj]['sct']['t2s']['dice'] = \
-        dice_coefficient(lesion_gt, lesion_seg_t2s)
+        dice_coefficient(lesion_gt>0, lesion_seg_t2s)
 
     # Check if there was at least one lesion in the ground truth. Otherwise these metrics don't apply.
     if np.max(lesion_gt):
         # Calculate and store the various metrics per subject.
-        scores[subj]['sct']['t2']['voxel_sensitivity'] = voxel_sensitivity(lesion_gt, lesion_seg_t2)
-        scores[subj]['sct']['t2s']['voxel_sensitivity'] = voxel_sensitivity(lesion_gt, lesion_seg_t2s)    
+        # scores[subj]['sct']['t2']['voxel_sensitivity'] = voxel_sensitivity(lesion_gt, lesion_seg_t2)
+        scores[subj]['sct']['t2s']['voxel_sensitivity'] = voxel_sensitivity(lesion_gt>0, lesion_seg_t2s)    
 
-        scores[subj]['sct']['t2']['voxel_precision'] = voxel_precision(lesion_gt, lesion_seg_t2)
-        scores[subj]['sct']['t2s']['voxel_precision'] = voxel_precision(lesion_gt, lesion_seg_t2s)    
+        # scores[subj]['sct']['t2']['voxel_precision'] = voxel_precision(lesion_gt, lesion_seg_t2)
+        scores[subj]['sct']['t2s']['voxel_precision'] = voxel_precision(lesion_gt>0, lesion_seg_t2s)    
 
-        scores[subj]['sct']['t2']['lesion_sensitivity'], nlesions_gt = lesion_sensitivity(lesion_gt, lesion_seg_t2)
-        scores[subj]['sct']['t2s']['lesion_sensitivity'], _ = lesion_sensitivity(lesion_gt, lesion_seg_t2s)
+        # scores[subj]['sct']['t2']['lesion_sensitivity'], nlesions_gt = lesion_sensitivity(lesion_gt, lesion_seg_t2)
+        scores[subj]['sct']['t2s']['lesion_sensitivity'], nlesions_gt = lesion_sensitivity(lesion_gt>0, lesion_seg_t2s)
 
-        scores[subj]['sct']['t2']['lesion_precision'], nlesions_t2 = lesion_precision(lesion_gt, lesion_seg_t2)
-        scores[subj]['sct']['t2s']['lesion_precision'], nlesions_t2s = lesion_precision(lesion_gt, lesion_seg_t2s)
+        # scores[subj]['sct']['t2']['lesion_precision'], nlesions_t2 = lesion_precision(lesion_gt, lesion_seg_t2)
+        scores[subj]['sct']['t2s']['lesion_precision'], nlesions_t2s = lesion_precision(lesion_gt>0, lesion_seg_t2s)
 
         # Record the number of lesions in the ground truth & automated segmentations.
         scores[subj]['nlesions_gt'] = nlesions_gt
-        scores[subj]['sct']['t2']['nlesions'] = nlesions_t2
+        # scores[subj]['sct']['t2']['nlesions'] = nlesions_t2
         scores[subj]['sct']['t2s']['nlesions'] = nlesions_t2s
 
     # If there is no lesion in the Ground Truth segmentation file.
@@ -143,15 +147,15 @@ for subj in tqdm(os.listdir(data_dir)):
         # Record the number of lesions as zero.
         scores[subj]['nlesions_gt'] = 0
 
-        # Check if there is at least one lesion returned by the T2 segmentation.
-        if np.max(lesion_seg_t2):
-            _, nlesions_t2 = measure.label(lesion_seg_t2, return_num=True)
-            scores[subj]['sct']['t2']['nlesions'] = nlesions_t2
-            scores[subj]['sct']['t2']['true_negative'] = 0  # Used to calculate subject-wise specificity
+        # # Check if there is at least one lesion returned by the T2 segmentation.
+        # if np.max(lesion_seg_t2):
+        #     _, nlesions_t2 = measure.label(lesion_seg_t2, return_num=True)
+        #     scores[subj]['sct']['t2']['nlesions'] = nlesions_t2
+        #     scores[subj]['sct']['t2']['true_negative'] = 0  # Used to calculate subject-wise specificity
 
-        else:
-            scores[subj]['sct']['t2']['nlesions'] = 0
-            scores[subj]['sct']['t2']['true_negative'] = 1  # Used to calculate subject-wise specificity
+        # else:
+        #     scores[subj]['sct']['t2']['nlesions'] = 0
+        #     scores[subj]['sct']['t2']['true_negative'] = 1  # Used to calculate subject-wise specificity
 
         # Check if there is at least one lesion returned by the T2* segmentation.
         if np.max(lesion_seg_t2s):
@@ -178,15 +182,17 @@ df.columns = df.columns.str.replace('results.', '', regex=False)
 
 # df.to_csv(os.path.join('results', 'subject_scores.csv'), index=False)
 
-subj_specificity = df[['sct.t2.true_negative', 'sct.t2s.true_negative']] \
+# df[['sct.t2.true_negative', 'sct.t2s.true_negative']] \
+subj_specificity = df[['sct.t2s.true_negative']] \
     .mean(skipna=True) \
     .to_frame(name='specificity') \
     .rename({
-        'sct.t2.true_negative': 'sct.t2.subject_specificity',
+        # 'sct.t2.true_negative': 'sct.t2.subject_specificity',
         'sct.t2s.true_negative': 'sct.t2s.subject_specificity'
         }) 
 
-summary_stats = df.drop(columns=['subject','sct.t2.true_negative', 'sct.t2s.true_negative'],axis=1) \
+# summary_stats = df.drop(columns=['subject','sct.t2.true_negative', 'sct.t2s.true_negative'],axis=1) \
+summary_stats = df.drop(columns=['subject', 'sct.t2s.true_negative'],axis=1) \
     .agg([
         np.nanmedian, 
         lambda x: x.quantile(q=0.25),
