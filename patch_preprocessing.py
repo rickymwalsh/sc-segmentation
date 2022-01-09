@@ -101,8 +101,8 @@ def extract_patches(subj_dir='', results_dir=None, ctr_algo='svm', patch_size=(4
                 
             patch_arr[i,:,:,:] = patch_im
             
-            # Save image patches to file.
-            np.save(os.path.join(results_dir, 'patches_' + f + '.npy'), patch_arr)
+        # Save image patches to file.
+        np.save(os.path.join(results_dir, 'patches_' + f + '.npy'), patch_arr)
     
     
 def main():

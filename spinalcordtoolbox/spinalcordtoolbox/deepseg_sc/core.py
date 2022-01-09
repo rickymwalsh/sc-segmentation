@@ -30,7 +30,7 @@ THR_DEEPSEG = {'t1': 0.15, 't2': 0.7, 't2s': 0.89, 'dwi': 0.01}
 logger = logging.getLogger(__name__)
 
 
-def find_centerline(algo, image_fname, contrast_type, brain_bool, folder_output, remove_temp_files, centerline_fname):
+def find_centerline(algo, image_fname, contrast_type, brain_bool, folder_output=None, remove_temp_files=1, centerline_fname=None):
     """
     Assumes RPI orientation
 
@@ -60,8 +60,9 @@ def find_centerline(algo, image_fname, contrast_type, brain_bool, folder_output,
         # run optic on a heatmap computed by a trained SVM+HoG algorithm
         # optic_models_fname = os.path.join(path_sct, 'data', 'optic_models', '{}_model'.format(contrast_type))
         # # TODO: replace with get_centerline(method=optic)
-        im_ctl, _, _, _ = get_centerline(im,
-                                         ParamCenterline(algo_fitting='optic', contrast=contrast_type))
+        im_ctl, _, _, _ = get_centerline(im, 
+                                         ParamCenterline(algo_fitting='optic', contrast=contrast_type),
+                                         verbose=0)
 
     elif algo == 'cnn':
         # CNN parameters
