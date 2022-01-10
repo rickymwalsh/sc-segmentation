@@ -69,7 +69,7 @@ def main():
 	patch_size = config['patch_size']
 
 	# Read in the list of subjects in each dataset.
-	if config['train-test-split'] is None:
+	if config['train_test_split'] is None:
 		splits = os.listdir(os.path.join('data', 'train-test-splits')) # Get a list of the splits.
 		# Get the latest split, based on the saved timestamp.
 		tstamps = [int(s[-17:-5]) for s in splits]  # The timestamp is saved at the end of the filename.
@@ -80,7 +80,7 @@ def main():
 		# Save timestamp for use later - link with processed data.
 		data_tstamp = max(tstamps)
 	else:
-		split_file = os.path.join('data','train-test-splits',config['train-test-split'])
+		split_file = os.path.join('data','train-test-splits',config['train_test_split'])
 		with open(split_file, 'r') as f:
 			data_split = json.load(f)
 		# Extract and save timestamp for use later - link with processed data
