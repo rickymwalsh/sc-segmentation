@@ -15,6 +15,8 @@ import json
 # import commands
 from sklearn.utils import shuffle
 
+from tensorflow.keras import backend as K
+from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau
 
 # from utils import fetch_data_files, visualize_data, normalize_data, load_3Dpatches, train_model
 from generator import get_training_and_validation_generators
@@ -27,6 +29,18 @@ sys.path.append(path_to_sct)
 
 from spinalcordtoolbox.image import Image
 from spinalcordtoolbox.deepseg_sc.cnn_models_3d import load_trained_model
+
+K.set_image_data_format('channels_first')
+
+def get_callbacks(path2save, fname, learning_rate_drop=None, learning_rate_patience=50):
+    model_checkpoint_best = ModelCheckpoint(path2save + '/best_' + fname + '.h5', save_best_only=True)
+    tensorboard = TensorBoard(log_dir=path2save + "/logs/{}".format(fname))
+    if learning_rate_drop:
+        patience = ReduceLROnPlateau(factor=learning_rate_drop, patience=learning_rate_patience, verbose=1)
+        return [model_checkpoint_best, tensorboard, patience]
+    else:
+        return [model_checkpoint_best, tensorboard]
+
 
 if config['preprocessed_data_file'] is None:
     data_list = [int(f) for f in os.listdir(os.path.join('data','preprocessed'))]
@@ -102,7 +116,7 @@ for contrast in ['t2', 't2s']:
                     learning_rate_patience=config["learning_rate_patience"]
                     )
                 )
-    
+
     # TODO: Add in model checkpoint.
 
 # TODO: Add JDOT model - use Class saved in other module.

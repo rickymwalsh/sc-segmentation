@@ -19,8 +19,7 @@ from tensorflow.keras import backend as K
 from tensorflow.keras.models import load_model
 from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard, ReduceLROnPlateau
 
-# **TODO** : switch to 'channels_first' when running on GPU.
-K.set_image_data_format('channels_last')
+K.set_image_data_format('channels_first')
 
 
 ################################ LOAD DATA ################################
@@ -154,7 +153,7 @@ def get_callbacks(path2save, fname, learning_rate_drop=None, learning_rate_patie
 
 def train_model(model, path2save, model_name, training_generator, validation_generator, steps_per_epoch, validation_steps, n_epochs, learning_rate_drop=None, learning_rate_patience=50):
     '''
-    Train a Keras model.
+    Train Keras model.
     
     Input:
         - model: Keras model that will be trained.
@@ -171,13 +170,13 @@ def train_model(model, path2save, model_name, training_generator, validation_gen
     model.fit(training_generator,
                 steps_per_epoch=steps_per_epoch,
                 epochs=n_epochs,
-                # validation_data=validation_generator,
-                # validation_steps=validation_steps,
-                # use_multiprocessing=True,
-                # callbacks=get_callbacks(
-                #     path2save, 
-                #     model_name,
-                #     learning_rate_drop=learning_rate_drop,
-                #     learning_rate_patience=learning_rate_patience
-                #     )
+                validation_data=validation_generator,
+                validation_steps=validation_steps,
+                use_multiprocessing=True,
+                callbacks=get_callbacks(
+                    path2save, 
+                    model_name,
+                    learning_rate_drop=learning_rate_drop,
+                    learning_rate_patience=learning_rate_patience
+                    )
                 )
