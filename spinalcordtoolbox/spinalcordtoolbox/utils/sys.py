@@ -511,12 +511,11 @@ def __get_git_origin(path_to_git_folder=None):
     return origin
 
 
-# __sct_dir__ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 # Set sct_dir from environment variable to avoid issues when running new version of some scripts from Windows directory.
+# __sct_dir__ = os.environ['SCT_DIR'] 
 
 ## SCT not installed on Niseko, so remove references
-
-# __sct_dir__ = os.environ['SCT_DIR'] 
-# __version__ = _version_string()
-# __data_dir__ = os.path.join(__sct_dir__, 'data')
-# __deepseg_dir__ = os.path.join(__data_dir__, 'deepseg_models')
+__sct_dir__ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+__version__ = _version_string()
+__data_dir__ = os.path.join(__sct_dir__, 'data')
+__deepseg_dir__ = os.path.join(__data_dir__, 'deepseg_models')
