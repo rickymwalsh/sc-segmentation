@@ -17,9 +17,9 @@ config["learning_rate_drop"] = 0.5  # How much at which to the learning rate wil
 config["learning_rate_patience"] = 10  # Number of epochs after which the learning rate will drop
 
 config["gpu_id"] = '1'
-config["data_dir"] = '../data/SCSeg/'
+config["data_dir"] = 'data/SCSeg/'
 # Temporary fix to run the training script **TODO: Create data dict with training subjects.
-config["data_dict"] = '../results/scores.json'  # pickle file containing a dictionary with at least the following keys: subject and contrast_foldname
+config["data_dict"] = 'results/scores.json'  # pickle file containing a dictionary with at least the following keys: subject and contrast_foldname
 
 # Model name containing the main parameters, which is useful for the hyperparm optimization
 config["model_name"] = '_'.join([config["gpu_id"],
@@ -29,5 +29,5 @@ config["model_name"] = '_'.join([config["gpu_id"],
                                  str(config["learning_rate_patience"])
                                 ])
 
-config["finetuned_models"] = '../models/finetuned'  # Relative path of the folder where the fine-tuned models are saved
-config["adapted_models"] = '../models/adapted'  # Relative path of the folder where the adapted models are saved
+config["finetuned_models"] = 'models/finetuned'  # Relative path of the folder where the fine-tuned models are saved
+config["adapted_models"] = 'models/adapted'  # Relative path of the folder where the adapted models are saved

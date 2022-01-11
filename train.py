@@ -4,6 +4,7 @@ import pandas as pd
 import pickle
 import random
 from datetime import datetime
+import json
 # import commands
 from sklearn.utils import shuffle
 
@@ -23,15 +24,40 @@ from spinalcordtoolbox.deepseg_sc.cnn_models_3d import load_trained_model
 
 os.environ['CUDA_VISIBLE_DEVICES'] = config['gpu_id']
 
-if config['preprocessed'] is None:
+if config['preprocessed_data_file'] is None:
     data_list = [int(f) for f in os.listdir(os.path.join('data','preprocessed'))]
     preprocessed_path = os.path.join('data','preprocessed', str(max(data_list)))
 else:
-    preprocessed_path = os.path.join('data','preprocessed', config['preprocessed'])
+    preprocessed_path = os.path.join('data','preprocessed', config['preprocessed_data_file'])
+
+
+# Record the time the model was trained.
+config['timestamp'] = datetime.now().strftime('%Y%m%d%H%M%S')
+
+# Create a separate directory for each new model (experiment) trained.
+model_dir = os.path.join(config["finetuned_models"], config['timestamp'] + '_' + config["model_name"])
+if not os.path.isdir(model_dir):
+    os.mkdir(model_dir)
+
+# Record the used config.
+with open(os.path.join(model_dir, 'config.json'), 'w') as f:
+    json.dump(config, f)
 
 for contrast in ['t2', 't2s']:
     print(contrast, '....')
-    X_train, y_train = np.load(preprocessed_path, f'training_{contrast}_{contrast}.npz')
+
+    if not os.path.isdir(os.path.join(model_dir, contrast)):
+        os.mkdir(os.path.join(model_dir, contrast))
+    
+    # Load the whole set of preprocessed data.
+    data_train = np.load(os.path.join(preprocessed_path, f'training_{contrast}_{contrast}.npz'))
+    data_valid = np.load(os.path.join(preprocessed_path, f'validation_{contrast}.npz'))
+
+    X_train = data_train['im_patches']
+    y_train = data_train['lesion_patches']
+
+    X_valid = data_valid['im_patches']
+    y_valid = data_valid['lesion_patches']
 
     X_train, y_train = shuffle(X_train, y_train, random_state=config['seed'])
 
@@ -57,31 +83,21 @@ for contrast in ['t2', 't2s']:
     model_fname = os.path.join('sct_deepseg_lesion_models', f'{contrast}_lesion.h5')
     model = load_trained_model(model_fname)
     ## Test model is working.
-    # print("Test:", model.predict(X_train[[0]]).shape)
+    print("Test:", model.predict(X_train[[0]]).shape)
 
-    # Create a separate directory for each new model (experiment) trained.
-    model_dir = os.path.join(config["finetuned_models"], config["model_name"])
-    if not os.path.isdir():
-        os.mkdir(model_dir)
-
-    # Record the time the model was trained.
-    config['timestamp'] = datetime.now().strftime('%Y%m%d%H%M%s')
-    with open(os.path.join(model_dir, 'config.json'), 'w') as f:
-        json.dump(f, config)
-
-    model.fit(train_generator,
-                steps_per_epoch=nb_train_steps,
-                epochs=config["n_epochs"],
-                validation_data=validation_generator,
-                validation_steps=nb_valid_steps,
-                use_multiprocessing=True,
-                callbacks=get_callbacks(
-                    model_dir, 
-                    contrast,
-                    learning_rate_drop=config["learning_rate_drop"],
-                    learning_rate_patience=config["learning_rate_patience"]
-                    )
-                )
+    # model.fit(train_generator,
+    #             steps_per_epoch=nb_train_steps,
+    #             epochs=config["n_epochs"],
+    #             validation_data=validation_generator,
+    #             validation_steps=nb_valid_steps,
+    #             use_multiprocessing=True,
+    #             callbacks=get_callbacks(
+    #                 os.path.join(model_dir, contrast), 
+    #                 contrast,
+    #                 learning_rate_drop=config["learning_rate_drop"],
+    #                 learning_rate_patience=config["learning_rate_patience"]
+    #                 )
+    #             )
     # Add in model checkpoint.
 
 # TODO: Add JDOT model - use Class saved in other module.
