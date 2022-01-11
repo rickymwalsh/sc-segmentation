@@ -114,9 +114,9 @@ for contrast in ['t2', 't2s']:
 
     model = load_trained_model(os.path.join('models', 'finetuned', latest_model, contrast, f'best_{contrast}.h5'))
 
-    pred_train = np.zeros(y_train.shape[0], 1, 48,48,48)
-    pred_valid = np.zeros(y_valid.shape[0], 1, 48,48,48)
-    pred_test = np.zeros(y_test.shape[0], 1, 48,48,48)
+    pred_train = np.zeros((y_train.shape[0], 1, 48,48,48))
+    pred_valid = np.zeros((y_valid.shape[0], 1, 48,48,48))
+    pred_test = np.zeros((y_test.shape[0], 1, 48,48,48))
 
-    for i,patch in enumerate(X_train):
-        pred_train[i,:,:,:,:] = model.predict(patch)
+    for i in range(X_train.shape[0]):
+        pred_train[i,:,:,:,:] = model.predict(X_train[[i]])
