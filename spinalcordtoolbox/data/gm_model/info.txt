@@ -1,0 +1,13 @@
+
+2016-09-22
+Model Param:
+	- path to data: /Volumes/folder_shared/greymattersegmentation/supervised_gmseg_method/model_data/amu_errsm_pilot_challenge16_toronto
+	- created folder: gmseg/
+	- used method: pca
+		-> % of variability kept for PCA: 0.95
+Data Param:
+	- denoising: True
+	- resampling to an axial resolution of: 0.3mm
+	- size of the square mask: 22.5mm
+	- registration parameters: step=1,type=seg,algo=centermassrot,metric=MeanSquares,smooth=2,iter=1:step=2,type=seg,algo=columnwise,metric=MeanSquares,smooth=3,iter=1
+	- intensity normalization: True
