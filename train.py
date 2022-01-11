@@ -9,7 +9,7 @@ from sklearn.utils import shuffle
 
 # Local modules
 from config_file import config
-from utils import fetch_data_files, visualize_data, normalize_data, load_3Dpatches, train_model
+# from utils import fetch_data_files, visualize_data, normalize_data, load_3Dpatches, train_model
 from generator import get_training_and_validation_generators
 
 # Add the spinalcordtoolbox location to the system path.
