@@ -7,6 +7,9 @@ import pandas as pd
 from datetime import datetime
 from sklearn.model_selection import train_test_split
 
+# Local config_file.py
+from config_file import config
+
 # Add the spinalcordtoolbox location to the system path.
 import sys
 from os.path import dirname, abspath, join as oj
@@ -83,3 +86,13 @@ def get_data_split(train_prop=0.7, valid_prop=0.1, train_on_lesion_only=True, ra
 
 	return outfile
 
+def main():
+	seed = config['seed']
+	training_prop = config['training_prop']
+	validation_prop = config['validation_prop']
+	train_on_lesion_only = config['train_on_lesion_only']
+
+	get_data_split(training_prop, validation_prop, train_on_lesion_only=train_on_lesion_only, random_state=seed)
+
+if __name__=="__main__":
+	main()

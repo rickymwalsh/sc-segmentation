@@ -2,7 +2,9 @@ import os
 
 config = dict()
 config["seed"] = 260
-config["training_split"] = 0.8
+config["training_prop"] = 0.7 # Proportion of data for training
+config["validation_prop"] = 0.1 # Proportion of data for validation
+config["train_on_lesion_only"] = True # Whether to only include subjects with at least one lesion in the training/validation set.
 config["train_test_split"] = None	# Can specify the file containing a specific train/test split 
 config["preprocessed_data_file"] = None 	# Can specify the directory containing a specific set of preprocessed data.
 config["patch_size"] = (48, 48, 48)  # Size of the patches to extract
