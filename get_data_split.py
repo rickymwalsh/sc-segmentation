@@ -61,7 +61,7 @@ def get_data_split(train_prop=0.7, valid_prop=0.1, train_on_lesion_only=True, ra
 		train_subjects,
 		train_size=0.5,
 		stratify=train_subjects.centerId,
-		random_state=seed)
+		random_state=random_state)
 
 	test_subjects = pd.concat([test_subjects, centre4, centre9, nonlesion_subjects])
 
