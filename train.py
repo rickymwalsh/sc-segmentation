@@ -108,7 +108,6 @@ for contrast in ['t2', 't2s']:
                 epochs=config["n_epochs"],
                 validation_data=validation_generator,
                 validation_steps=nb_valid_steps,
-                use_multiprocessing=True,
                 callbacks=get_callbacks(
                     os.path.join(model_dir, contrast), 
                     contrast,
