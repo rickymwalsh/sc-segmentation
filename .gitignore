@@ -4,6 +4,7 @@ Logs
 venv_lx/
 Data/
 data/
+!spinalcordtoolbox/data/
 models/
 results/
 __pycache__/
