@@ -15,6 +15,7 @@ import json
 # import commands
 from sklearn.utils import shuffle
 
+import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau
 
