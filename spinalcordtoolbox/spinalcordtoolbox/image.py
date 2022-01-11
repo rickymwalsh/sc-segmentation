@@ -30,7 +30,7 @@ import re
 from scipy.ndimage import map_coordinates
 
 from spinalcordtoolbox.types import Coordinate
-from spinalcordtoolbox.utils import sct_dir_local_path, extract_fname
+from spinalcordtoolbox.utils import extract_fname, # sct_dir_local_path
 
 logger = logging.getLogger(__name__)
 
