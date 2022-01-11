@@ -1,4 +1,11 @@
 import os
+
+# Local modules
+from config_file import config
+
+# Set visible GPU
+os.environ['CUDA_VISIBLE_DEVICES'] = config['gpu_id']
+
 import numpy as np
 import pandas as pd
 import pickle
@@ -8,8 +15,7 @@ import json
 # import commands
 from sklearn.utils import shuffle
 
-# Local modules
-from config_file import config
+
 # from utils import fetch_data_files, visualize_data, normalize_data, load_3Dpatches, train_model
 from generator import get_training_and_validation_generators
 
@@ -21,8 +27,6 @@ sys.path.append(path_to_sct)
 
 from spinalcordtoolbox.image import Image
 from spinalcordtoolbox.deepseg_sc.cnn_models_3d import load_trained_model
-
-os.environ['CUDA_VISIBLE_DEVICES'] = config['gpu_id']
 
 if config['preprocessed_data_file'] is None:
     data_list = [int(f) for f in os.listdir(os.path.join('data','preprocessed'))]
@@ -83,22 +87,23 @@ for contrast in ['t2', 't2s']:
     model_fname = os.path.join('sct_deepseg_lesion_models', f'{contrast}_lesion.h5')
     model = load_trained_model(model_fname)
     ## Test model is working.
-    print("Test:", model.predict(X_train[[0]]).shape)
+    # print("Test:", model.predict(X_train[[0]]).shape)
 
-    # model.fit(train_generator,
-    #             steps_per_epoch=nb_train_steps,
-    #             epochs=config["n_epochs"],
-    #             validation_data=validation_generator,
-    #             validation_steps=nb_valid_steps,
-    #             use_multiprocessing=True,
-    #             callbacks=get_callbacks(
-    #                 os.path.join(model_dir, contrast), 
-    #                 contrast,
-    #                 learning_rate_drop=config["learning_rate_drop"],
-    #                 learning_rate_patience=config["learning_rate_patience"]
-    #                 )
-    #             )
-    # Add in model checkpoint.
+    model.fit(train_generator,
+                steps_per_epoch=nb_train_steps,
+                epochs=config["n_epochs"],
+                validation_data=validation_generator,
+                validation_steps=nb_valid_steps,
+                use_multiprocessing=True,
+                callbacks=get_callbacks(
+                    os.path.join(model_dir, contrast), 
+                    contrast,
+                    learning_rate_drop=config["learning_rate_drop"],
+                    learning_rate_patience=config["learning_rate_patience"]
+                    )
+                )
+    
+    # TODO: Add in model checkpoint.
 
 # TODO: Add JDOT model - use Class saved in other module.
 
