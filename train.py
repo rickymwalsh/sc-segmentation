@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import pickle
 import random
+from datetime import datetime
 # import commands
 from sklearn.utils import shuffle
 
@@ -11,7 +12,6 @@ from config_file import config
 from utils import fetch_data_files, visualize_data, normalize_data, load_3Dpatches, train_model
 from generator import get_training_and_validation_generators
 
-# from msct_image import Image  # msct_image is deprecated - use spinalcordtoolbox.image instead 
 # Add the spinalcordtoolbox location to the system path.
 import sys
 from os.path import dirname, abspath, join as oj
@@ -28,7 +28,6 @@ if config['preprocessed'] is None:
     preprocessed_path = os.path.join('data','preprocessed', str(max(data_list)))
 else:
     preprocessed_path = os.path.join('data','preprocessed', config['preprocessed'])
-
 
 for contrast in ['t2', 't2s']:
     print(contrast, '....')
@@ -60,13 +59,15 @@ for contrast in ['t2', 't2s']:
     ## Test model is working.
     # print("Test:", model.predict(X_train[[0]]).shape)
 
+    # Create a separate directory for each new model (experiment) trained.
+    model_dir = os.path.join(config["finetuned_models"], config["model_name"])
+    if not os.path.isdir():
+        os.mkdir(model_dir)
 
-    # # for g, g_name in zip([train_generator, validation_generator], ['train_visu', 'valid_visu']):
-    # #     print('\n' + g_name)
-    # #     X_visu_, y_visu_ = next(g)
-    # #     idx_random = random.randint(0, X_visu_.shape[-1])
-    # #     visualize_data(X=X_visu_[0,0,:,:,idx_random], Y=y_visu_[0,0,:,:,idx_random])
-
+    # Record the time the model was trained.
+    config['timestamp'] = datetime.now().strftime('%Y%m%d%H%M%s')
+    with open(os.path.join(model_dir, 'config.json'), 'w') as f:
+        json.dump(f, config)
 
     model.fit(train_generator,
                 steps_per_epoch=nb_train_steps,
@@ -75,11 +76,13 @@ for contrast in ['t2', 't2s']:
                 validation_steps=nb_valid_steps,
                 use_multiprocessing=True,
                 callbacks=get_callbacks(
-                    config["path2save"], 
-                    config["model_name"],
+                    model_dir, 
+                    contrast,
                     learning_rate_drop=config["learning_rate_drop"],
                     learning_rate_patience=config["learning_rate_patience"]
                     )
                 )
     # Add in model checkpoint.
+
+# TODO: Add JDOT model - use Class saved in other module.
 

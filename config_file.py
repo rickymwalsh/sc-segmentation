@@ -27,4 +27,5 @@ config["model_name"] = '_'.join([config["gpu_id"],
                                  str(config["learning_rate_patience"])
                                 ])
 
-config["path2save"] = '../models/'  # Relative path of the folder where the trained models are saved
+config["finetuned_models"] = '../models/finetuned'  # Relative path of the folder where the fine-tuned models are saved
+config["adapted_models"] = '../models/adapted'  # Relative path of the folder where the adapted models are saved
