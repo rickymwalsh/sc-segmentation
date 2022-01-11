@@ -44,7 +44,7 @@ def get_data_split(train_prop=0.7, valid_prop=0.1, train_on_lesion_only=True, ra
 		relevant_subjects_df, 
 		train_size=len_train, 
 		stratify=relevant_subjects_df.centerId,
-		random_state=seed)
+		random_state=random_state)
 
 	# Similarly, 9 has only five subjects with lesions, and four of them go into the training data above.
 	# Treat similarly to centre4 above.
@@ -55,7 +55,7 @@ def get_data_split(train_prop=0.7, valid_prop=0.1, train_on_lesion_only=True, ra
 		valid_test_subjects,
 		train_size=len_valid,
 		stratify=valid_test_subjects.centerId,
-		random_state=seed)
+		random_state=random_state)
 
 	train_t2, train_t2s = train_test_split(
 		train_subjects,
