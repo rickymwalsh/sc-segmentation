@@ -51,40 +51,45 @@ for contrast in ['t2', 't2s']:
     data_test = np.load(os.path.join(preprocessed_path, f'test_{contrast}.npz'))
 
     X_train = data_train['im_patches']
-    y_train = data_train['lesion_patches']
+    y_train = data_train['lesion_patches'].astype(np.uint8)
 
     X_valid = data_valid['im_patches']
-    y_valid = data_valid['lesion_patches']
+    y_valid = data_valid['lesion_patches'].astype(np.uint8)
 
     X_test = data_test['im_patches']
-    y_test = data_test['lesion_patches']
+    y_test = data_test['lesion_patches'].astype(np.uint8)
 
     model = load_trained_model(os.path.join('models', 'finetuned', latest_model, contrast, f'best_{contrast}.h5'))
 
-    pred_train = np.zeros(y_train.shape)
-    pred_valid = np.zeros(y_valid.shape)
-    pred_test = np.zeros(y_test.shape)
+    pred_train = np.zeros(y_train.shape, dtype=np.uint8)
+    pred_valid = np.zeros(y_valid.shape, dtype=np.uint8)
+    pred_test = np.zeros(y_test.shape, dtype=np.uint8)
 
-    train_results = np.zeros((y_train.shape[0], 3))
-    valid_results = np.zeros((y_valid.shape[0], 3))
-    test_results = np.zeros((y_test.shape[0], 3))
+    train_results = np.zeros((y_train.shape[0], 5))
+    valid_results = np.zeros((y_valid.shape[0], 5))
+    test_results = np.zeros((y_test.shape[0], 5))
 
     for i in range(X_train.shape[0]):
         pred_train[i,:,:,:,:] = model.predict(X_train[[i]])
-        train_results[i, 0] = dice_coefficient(X_train[i], pred_train[i])
-        train_results[i, 1] = voxel_sensitivity(X_train[i], pred_train[i])
-        train_results[i, 2] = voxel_precision(X_train[i], pred_train[i])
+        
+        train_results[i, 0] = dice_coefficient(y_train[i], pred_train[i])
+        train_results[i, 1] = voxel_sensitivity(y_train[i], pred_train[i])
+        train_results[i, 2] = voxel_precision(y_train[i], pred_train[i])
+        train_results[i, 3] = np.max(y_train)
+        train_results[i, 4] = np.max(pred_train)
 
     for i in range(X_valid.shape[0]):
         pred_valid[i,:,:,:,:] = model.predict(X_valid[[i]])
-        valid_results[i, 0] = dice_coefficient(X_valid[i], pred_valid[i])
-        valid_results[i, 1] = voxel_sensitivity(X_valid[i], pred_valid[i])
-        valid_results[i, 2] = voxel_precision(X_valid[i], pred_valid[i])
+        valid_results[i, 0] = dice_coefficient(y_valid[i], pred_valid[i])
+        valid_results[i, 1] = voxel_sensitivity(y_valid[i], pred_valid[i])
+        valid_results[i, 2] = voxel_precision(y_valid[i], pred_valid[i])
 
     for i in range(X_test.shape[0]):
-        pred_train[i,:,:,:,:] = model.predict(X_test[[i]])
-        test_results[i, 0] = dice_coefficient(X_test[i], pred_test[i])
-        test_results[i, 1] = voxel_sensitivity(X_test[i], pred_test[i])
-        test_results[i, 2] = voxel_precision(X_test[i], pred_test[i])
+        pred_test[i,:,:,:,:] = model.predict(X_test[[i]])
+        test_results[i, 0] = dice_coefficient(y_test[i], pred_test[i])
+        test_results[i, 1] = voxel_sensitivity(y_test[i], pred_test[i])
+        test_results[i, 2] = voxel_precision(y_test[i], pred_test[i])
+        test_results[i, 3] = np.max(y_test)
+        test_results[i, 4] = np.max(pred_test)
 
     np.savez(f'quick_results_{contrast}.npz', train_results=train_results, valid_results=valid_results, test_results=test_results)
