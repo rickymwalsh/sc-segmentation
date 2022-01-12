@@ -13,7 +13,7 @@ import pandas as pd
 import os
 from tqdm import tqdm
 import json
-from copy.copy import deepcopy
+from copy import deepcopy
 import argparse
 
 # Add the spinalcordtoolbox location to the system path.
@@ -129,18 +129,21 @@ def retrieve_data_split(data_id):
 
 def generate_predictions(model_id, data_split):
     for contrast in ['t2', 't2s']:
-        model = load_trained_model(os.path.join('models', 'finetuned', model_id, contrast))
+        model = load_trained_model(os.path.join('models', 'finetuned', model_id, contrast, f'best_{contrast}.h5'))
 
         # Loop through the subsets (training_t2, training_t2s, validation, test)
-        for subset in data_split:
-            for subj,values in subset.items():
+        for subset,subdict in data_split.items():
+            for subj,values in subdict.items():
                 seg_im = get_prediction(model, values[f'{contrast}_path'], contrast)
 
-                seg_dir = os.path.join('data','SCSeg',subj,'segmentation',model_id)
-                if not os.path.isdir(seg_dir):
-                    os.mkdir(seg_dir)
+                seg_dir = os.path.join('data','SCSeg',subj,'segmentation')
+                model_dir = os.path.join(seg_dir, model_id)
+                if not os.path.isdir(model_dir):
+                    if not os.path.isdir(seg_dir):
+                        os.mkdir(seg_dir)
+                    os.mkdir(model_dir)
 
-                seg_im.save(os.path.join(seg_dir, contrast))
+                seg_im.save(os.path.join(model_dir, contrast + '.nii.gz'))
 
 
 def compute_scores(model_id, data_split):
@@ -153,10 +156,10 @@ def compute_scores(model_id, data_split):
 
             for contrast in ['t2','t2s']:
 
-                seg_path = os.path.join('data','SCSeg',subj,'segmentation',model_id, contrast)
-                gt_path = add_suffix(data_split[subset][subj][lesion_path], f'_crop_{contrast}')
+                seg_path = os.path.join('data','SCSeg',subj,'segmentation',model_id, f'{contrast}.nii.gz')
+                gt_path = add_suffix(data_split[subset][subj]['lesion_path'], f'_crop_{contrast}')
 
-                seg = Image(seg_path).data
+                seg = Image(seg_path).data.astype(np.uint8)
                 gt = Image(gt_path).data.astype(np.uint8)
 
                 res_tmp = {}
@@ -232,7 +235,7 @@ def main():
     print(df.columns)
     print(df.head())
 
-    # # df.to_csv(os.path.join('results', 'subject_scores.csv'), index=False)
+    df.to_csv(os.path.join(results_dir, 'subject_scores.csv'), index=False)
 
     # # df[['sct.t2.true_negative', 'sct.t2s.true_negative']] \
     # subj_specificity = df[['sct.t2s.true_negative']] \
@@ -263,11 +266,5 @@ def main():
 
     # summary_stats.to_csv(os.path.join('results', 'summary_stats.csv'), index=False)
 
-
-
-
-
-
-
-
-
+if __name__=="__main__":
+    main()
