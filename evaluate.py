@@ -5,11 +5,6 @@ Created on Tue Jan  4 15:06:27 2022
 @author: Ricky
 """
 
-# TODO: 
-#   Set up for all experiments/models.
-#   Relate written results to experiment identifier.
-
-import nibabel as nib
 import numpy as np
 from scipy.spatial.distance import dice
 from sklearn.metrics import recall_score, precision_score
@@ -18,11 +13,31 @@ import pandas as pd
 import os
 from tqdm import tqdm
 import json
+from copy.copy import deepcopy
+import argparse
 
-data_dir = os.path.join('data', 'SCSeg')
+# Add the spinalcordtoolbox location to the system path.
+import sys
+from os.path import dirname, abspath, join as oj
+path_to_sct = oj(dirname(abspath(__file__)), 'spinalcordtoolbox')
+sys.path.append(path_to_sct)
 
-# Loads the image with Nibabel.
-load_data = lambda fpath: nib.load(fpath).get_fdata()
+from spinalcordtoolbox.image import Image, add_suffix, zeros_like
+from spinalcordtoolbox.deepseg_lesion.core import apply_intensity_normalization, segment_3d
+from spinalcordtoolbox.deepseg_sc.core import find_centerline, crop_image_around_centerline
+from spinalcordtoolbox.deepseg_sc.cnn_models_3d import load_trained_model
+
+from preprocessing import normalize_data, crop_images, extract_patches
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-model_id", type=str, help="The id of the model to be evaluated (same as its folder name).")
+parser.add_argument("-results_from_file", default=1, type=int, help="Set to 1 if the scores.json file already exists and we want to just calculate summary statistics. \
+                                                                    Set to 0 if the segmentations and subject scores need to be generated.")
+args = parser.parse_args()
+
+results_from_file = args.results_from_file
+model_id = args.model_id
+
 
 def dice_coefficient(lesion_gt, lesion_seg):
     """ Returns the Dice coefficient for one subject given the ground truth lesion mask and segmentation mask for that subject. """
@@ -90,123 +105,169 @@ def lesion_precision(lesion_gt, lesion_seg):
     # Also return the total number of lesions detected.
     return TP/len(labels), len(labels)
 
+def get_prediction(model, im_path, contrast):
+    # Use the already saved cropped version.
+    im_path = add_suffix(im_path, '_crop')
 
-scores = {}   # Dict to store the results.
+    im = Image(im_path)
 
-# Loop over each subject.
-for subj in tqdm(os.listdir(data_dir)):
-    # Create the high-level dict structure.
-    scores[subj] = {'sct':{'t2':{}, 't2s':{}}, 'finetuned': {}, 'adapted': {}}
-    # Filepaths for the segmentations using the SCT models.
-    fpaths = {
-        # 'gt': os.path.join(data_dir, subj, \
-        #                    'final', 'labelLesion_iso_bin.nii.gz'),
-        'gt': os.path.join(data_dir, subj, \
-                           'SC', 'labelLesion.nii.gz'),
-        't2': os.path.join(data_dir, subj, \
-                           'segmentation', 't2_iso_onT2srig_nl_lesionseg.nii.gz'),
-        # 't2s': os.path.join(data_dir, subj, \
-        #                     'segmentation', 't2sMerge_iso_lesionseg.nii.gz')
-        't2s': os.path.join(data_dir, subj, \
-                            'segmentation', 't2sMerge_lesionseg.nii.gz')
-        }
+    # Apply Nyul-like percentiles normalization.
+    im = apply_intensity_normalization(im, contrast)
 
-    # Load the lesion masks.
-    lesion_gt = load_data(fpaths['gt'])   # Ground Truth
-    lesion_seg_t2 = load_data(fpaths['t2'])     # Automated segmentation of T2 using the T2 model.
-    lesion_seg_t2s = load_data(fpaths['t2s'])    # Automated segmentation of T2* using the T2* model.
-    
-    # # Calculate and store the Dice scores.
-    # scores[subj]['sct']['t2']['dice'] = \
-    #     dice_coefficient(lesion_gt, lesion_seg_t2)
-    scores[subj]['sct']['t2s']['dice'] = \
-        dice_coefficient(lesion_gt>0, lesion_seg_t2s)
+    # Get prediction. (Apply normalization, patch_extraction, predict & reconstruct the image)
+    seg_im = segment_3d(model_fname=None, contrast_type=contrast, im=im, model=model)
 
-    # Check if there was at least one lesion in the ground truth. Otherwise these metrics don't apply.
-    if np.max(lesion_gt):
-        # Calculate and store the various metrics per subject.
-        # scores[subj]['sct']['t2']['voxel_sensitivity'] = voxel_sensitivity(lesion_gt, lesion_seg_t2)
-        scores[subj]['sct']['t2s']['voxel_sensitivity'] = voxel_sensitivity(lesion_gt>0, lesion_seg_t2s)    
+    # Return the segmented cropped image and the corresponding Ground Truth mask.
+    return seg_im
 
-        # scores[subj]['sct']['t2']['voxel_precision'] = voxel_precision(lesion_gt, lesion_seg_t2)
-        scores[subj]['sct']['t2s']['voxel_precision'] = voxel_precision(lesion_gt>0, lesion_seg_t2s)    
+def retrieve_data_split(data_id):
+    data_split_path = os.path.join('data', 'train-test-splits', f'split_{data_id}.json')
+    with open(data_split_path, 'r') as f:
+        data_split = json.load(f)
 
-        # scores[subj]['sct']['t2']['lesion_sensitivity'], nlesions_gt = lesion_sensitivity(lesion_gt, lesion_seg_t2)
-        scores[subj]['sct']['t2s']['lesion_sensitivity'], nlesions_gt = lesion_sensitivity(lesion_gt>0, lesion_seg_t2s)
+    return data_split
 
-        # scores[subj]['sct']['t2']['lesion_precision'], nlesions_t2 = lesion_precision(lesion_gt, lesion_seg_t2)
-        scores[subj]['sct']['t2s']['lesion_precision'], nlesions_t2s = lesion_precision(lesion_gt>0, lesion_seg_t2s)
+def generate_predictions(model_id, data_split):
+    for contrast in ['t2', 't2s']:
+        model = load_trained_model(os.path.join('models', 'finetuned', model_id, contrast))
 
-        # Record the number of lesions in the ground truth & automated segmentations.
-        scores[subj]['nlesions_gt'] = nlesions_gt
-        # scores[subj]['sct']['t2']['nlesions'] = nlesions_t2
-        scores[subj]['sct']['t2s']['nlesions'] = nlesions_t2s
+        # Loop through the subsets (training_t2, training_t2s, validation, test)
+        for subset in data_split:
+            for subj,values in subset.items():
+                seg_im = get_prediction(model, values[f'{contrast}_path'], contrast)
 
-    # If there is no lesion in the Ground Truth segmentation file.
+                seg_dir = os.path.join('data','SCSeg',subj,'segmentation',model_id)
+                if not os.path.isdir(seg_dir):
+                    os.mkdir(seg_dir)
+
+                seg_im.save(os.path.join(seg_dir, contrast))
+
+
+def compute_scores(model_id, data_split):
+
+    scores = {}
+
+    for subset in data_split:
+        for subj in tqdm(data_split[subset]):
+            scores[subj] = {'subset':subset, 't2':{}, 't2s':{}}
+
+            for contrast in ['t2','t2s']:
+
+                seg_path = os.path.join('data','SCSeg',subj,'segmentation',model_id, contrast)
+                gt_path = add_suffix(data_split[subset][subj][lesion_path], f'_crop_{contrast}')
+
+                seg = Image(seg_path).data
+                gt = Image(gt_path).data.astype(np.uint8)
+
+                res_tmp = {}
+                res_tmp['dice'] = dice_coefficient(gt, seg)
+
+                # Check if there was at least one lesion in the ground truth. Otherwise these metrics don't apply.
+                if np.max(gt):
+                    res_tmp['voxel_sensitivity'] = voxel_sensitivity(gt, seg)
+                    res_tmp['lesion_sensitivity'], res_tmp['nlesions_gt'] = lesion_sensitivity(gt, seg)
+                    # Check if there is at least one lesion returned in the segmentation.
+                    if np.max(seg):
+                        res_tmp['voxel_precision'] = voxel_precision(gt, seg)
+                        res_tmp['lesion_precision'], res_tmp['nlesions_seg'] = lesion_precision(gt, seg)
+                    else: 
+                        res_tmp['nlesions_seg'] = 0
+
+
+                # If there is no lesion in the Ground Truth segmentation file.
+                else:
+                    # Record the number of lesions as zero.
+                    res_tmp['nlesions_gt'] = 0
+
+                    # Check if there is at least one lesion returned by the segmentation.
+                    if np.max(seg):
+                        _, res_tmp['nlesions_seg'] = measure.label(seg, return_num=True)
+                        res_tmp['true_negative'] = 0  # Used to calculate subject-wise specificity
+
+                    else:
+                        res_tmp['nlesions_seg'] = 0
+                        res_tmp['true_negative'] = 1  # Used to calculate subject-wise specificity
+
+                scores[subj][contrast] = deepcopy(res_tmp)
+
+    return scores
+
+
+def main():
+
+    model_dir = os.path.join('models', 'finetuned', model_id)
+
+    # Retrieve the relevant train-test-split used for this model.
+    with open(os.path.join(model_dir, 'config.json'), 'r') as f:
+        config = json.load(f)
+
+    data_id = config['preprocessed_data_file']
+    data_split = retrieve_data_split(data_id)
+
+    # Create a directory for the model results
+    results_dir = os.path.join('results', model_id)
+    if not os.path.isdir(results_dir):
+        os.mkdir(results_dir)
+        print(f'Created directory: {results_dir}')
+
+    if results_from_file==0:
+        # Get all of the segmentations and write them to file.
+        generate_predictions(model_id, data_split)
+
+        # Get all of the result scores for the model.
+        scores = compute_scores(model_id, data_split)
+
+        with open(os.path.join(results_dir, 'scores.json'), 'w') as f:
+            json.dump(scores, f)
+
     else:
-        # Record the number of lesions as zero.
-        scores[subj]['nlesions_gt'] = 0
+        with open(os.path.join(results_dir, 'scores.json'), 'r') as f:
+            scores = json.load(f)
 
-        # # Check if there is at least one lesion returned by the T2 segmentation.
-        # if np.max(lesion_seg_t2):
-        #     _, nlesions_t2 = measure.label(lesion_seg_t2, return_num=True)
-        #     scores[subj]['sct']['t2']['nlesions'] = nlesions_t2
-        #     scores[subj]['sct']['t2']['true_negative'] = 0  # Used to calculate subject-wise specificity
+    scores = [{"subject":subj, 'results':values} for subj, values in scores.items()]
 
-        # else:
-        #     scores[subj]['sct']['t2']['nlesions'] = 0
-        #     scores[subj]['sct']['t2']['true_negative'] = 1  # Used to calculate subject-wise specificity
+    df = pd.json_normalize(scores)
+    df.columns = df.columns.str.replace('results.', '', regex=False)
 
-        # Check if there is at least one lesion returned by the T2* segmentation.
-        if np.max(lesion_seg_t2s):
-            _, nlesions_t2s = measure.label(lesion_seg_t2s, return_num=True)
-            scores[subj]['sct']['t2s']['nlesions'] = nlesions_t2s
-            scores[subj]['sct']['t2s']['true_negative'] = 0  # Used to calculate subject-wise specificity
+    print(df.columns)
+    print(df.head())
 
-        else:
-            scores[subj]['sct']['t2s']['nlesions'] = 0
-            scores[subj]['sct']['t2s']['true_negative'] = 1  # Used to calculate subject-wise specificity
+    # # df.to_csv(os.path.join('results', 'subject_scores.csv'), index=False)
+
+    # # df[['sct.t2.true_negative', 'sct.t2s.true_negative']] \
+    # subj_specificity = df[['sct.t2s.true_negative']] \
+    #     .mean(skipna=True) \
+    #     .to_frame(name='specificity') \
+    #     .rename({
+    #         # 'sct.t2.true_negative': 'sct.t2.subject_specificity',
+    #         'sct.t2s.true_negative': 'sct.t2s.subject_specificity'
+    #         }) 
+
+    # # summary_stats = df.drop(columns=['subject','sct.t2.true_negative', 'sct.t2s.true_negative'],axis=1) \
+    # summary_stats = df.drop(columns=['subject', 'sct.t2s.true_negative'],axis=1) \
+    #     .agg([
+    #         np.nanmedian, 
+    #         lambda x: x.quantile(q=0.25),
+    #         lambda x: x.quantile(q=0.75)]) \
+    #     .T 
+
+    # summary_stats.columns = ['median', 'q25', 'q75']
+
+    # summary_stats = summary_stats \
+    #     .append(subj_specificity) \
+    #     .reset_index()
+
+    # summary_stats['IQR'] = summary_stats['q75'] - summary_stats['q25']
+
+    # summary_stats[['model', 'data', 'metric']] = summary_stats['index'].str.split('.', 2, expand=True)
+
+    # summary_stats.to_csv(os.path.join('results', 'summary_stats.csv'), index=False)
 
 
 
-with open(os.path.join('results', 'scores.json'), 'w') as f:
-    json.dump(scores, f)
 
-# with open(os.path.join('results', 'scores.json'), 'r') as f:
-#     scores = json.load(f)
 
-scores = [{"subject":subj, 'results':values} for subj, values in scores.items()]
 
-df = pd.json_normalize(scores)
-df.columns = df.columns.str.replace('results.', '', regex=False)
 
-# df.to_csv(os.path.join('results', 'subject_scores.csv'), index=False)
 
-# df[['sct.t2.true_negative', 'sct.t2s.true_negative']] \
-subj_specificity = df[['sct.t2s.true_negative']] \
-    .mean(skipna=True) \
-    .to_frame(name='specificity') \
-    .rename({
-        # 'sct.t2.true_negative': 'sct.t2.subject_specificity',
-        'sct.t2s.true_negative': 'sct.t2s.subject_specificity'
-        }) 
 
-# summary_stats = df.drop(columns=['subject','sct.t2.true_negative', 'sct.t2s.true_negative'],axis=1) \
-summary_stats = df.drop(columns=['subject', 'sct.t2s.true_negative'],axis=1) \
-    .agg([
-        np.nanmedian, 
-        lambda x: x.quantile(q=0.25),
-        lambda x: x.quantile(q=0.75)]) \
-    .T 
-
-summary_stats.columns = ['median', 'q25', 'q75']
-
-summary_stats = summary_stats \
-    .append(subj_specificity) \
-    .reset_index()
-
-summary_stats['IQR'] = summary_stats['q75'] - summary_stats['q25']
-
-summary_stats[['model', 'data', 'metric']] = summary_stats['index'].str.split('.', 2, expand=True)
-
-summary_stats.to_csv(os.path.join('results', 'summary_stats.csv'), index=False)

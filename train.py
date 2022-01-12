@@ -46,6 +46,7 @@ def get_callbacks(path2save, fname, learning_rate_drop=None, learning_rate_patie
 if config['preprocessed_data_file'] is None:
     data_list = [int(f) for f in os.listdir(os.path.join('data','preprocessed'))]
     preprocessed_path = os.path.join('data','preprocessed', str(max(data_list)))
+    config['preprocessed_data_file'] = str(max(data_list))
 else:
     preprocessed_path = os.path.join('data','preprocessed', config['preprocessed_data_file'])
 

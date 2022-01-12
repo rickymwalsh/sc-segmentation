@@ -78,14 +78,17 @@ def apply_intensity_normalization(img, contrast):
     return img_normalized
 
 
-def segment_3d(model_fname, contrast_type, im):
+def segment_3d(model_fname, contrast_type, im, model=None):
     """Perform segmentation with 3D convolutions."""
     dct_patch_3d = {'t2': {'size': (48, 48, 48), 'mean': 871.309, 'std': 557.916},
                     't2_ax': {'size': (48, 48, 48), 'mean': 835.592, 'std': 528.386},
                     't2s': {'size': (48, 48, 48), 'mean': 1011.31, 'std': 678.985}}
 
-    # load 3d model
-    seg_model = load_trained_model(model_fname)
+    if model is None:
+        # load 3d model
+        seg_model = load_trained_model(model_fname)
+    else:
+        seg_model = model
 
     out_data = np.zeros(im.data.shape)
 

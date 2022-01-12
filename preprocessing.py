@@ -62,7 +62,8 @@ def extract_patches(im_data, patch_size):
 
 		patch_arr[i,:,:,:] = patch_im
 
-	return patch_arr
+	# add an extra axis (to represent the single channel)
+	return np.expand_dims(patch_arr, axis=1)
 
 
 def main():
@@ -89,7 +90,7 @@ def main():
 	# For each dataset:
 	# 	Loop through each subject.
 	# 		Apply preprocessing
-	# 			1. Detect centerline & Cropping image around SC (48mm)
+	# 			1. Detect centerline & Crop image around SC (48mm)
 	# 			1b. Save image in original folder. 
 	# 			2. Intensity normalization (with percentiles)  (apply_intensity_normalization)
 	# 			3. Mean/Std. Dev normalization
@@ -123,9 +124,9 @@ def main():
 				im_patches.append(extract_patches(im_cropped.data, patch_size))
 				lesion_patches.append(extract_patches(lesion_cropped.data, patch_size))
 
-			# Combine the list of patches and add an extra axis (to represent the single channel)
-			im_patches = np.expand_dims(np.concatenate(im_patches), axis=1)
-			lesion_patches = np.expand_dims(np.concatenate(lesion_patches), axis=1)
+			# Combine the list of patches
+			im_patches = np.concatenate(im_patches)
+			lesion_patches = np.concatenate(lesion_patches)
 
 			# Save to .npz archive.
 			if not os.path.isdir(os.path.join('data', 'preprocessed', str(data_tstamp))):
