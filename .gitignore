@@ -8,6 +8,7 @@ data/
 models/
 results/
 __pycache__/
+.ipynb_checkpoints/
 
 # ignores taken from spinalcordtoolbox repo
 spinalcordtoolbox/tmp/**/*

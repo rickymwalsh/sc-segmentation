@@ -75,8 +75,8 @@ for contrast in ['t2', 't2s']:
         train_results[i, 0] = dice_coefficient(y_train[i], pred_train[i])
         train_results[i, 1] = voxel_sensitivity(y_train[i], pred_train[i])
         train_results[i, 2] = voxel_precision(y_train[i], pred_train[i])
-        train_results[i, 3] = np.max(y_train)
-        train_results[i, 4] = np.max(pred_train)
+        train_results[i, 3] = np.max(y_train[i])
+        train_results[i, 4] = np.max(pred_train[i])
 
     for i in range(X_valid.shape[0]):
         pred_valid[i,:,:,:,:] = model.predict(X_valid[[i]])
@@ -89,7 +89,7 @@ for contrast in ['t2', 't2s']:
         test_results[i, 0] = dice_coefficient(y_test[i], pred_test[i])
         test_results[i, 1] = voxel_sensitivity(y_test[i], pred_test[i])
         test_results[i, 2] = voxel_precision(y_test[i], pred_test[i])
-        test_results[i, 3] = np.max(y_test)
-        test_results[i, 4] = np.max(pred_test)
+        test_results[i, 3] = np.max(y_test[i])
+        test_results[i, 4] = np.max(pred_test[i])
 
     np.savez(f'quick_results_{contrast}.npz', train_results=train_results, valid_results=valid_results, test_results=test_results)
