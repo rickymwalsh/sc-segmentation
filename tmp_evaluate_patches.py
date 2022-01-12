@@ -17,11 +17,6 @@ sys.path.append(path_to_sct)
 from spinalcordtoolbox.image import Image
 from spinalcordtoolbox.deepseg_sc.cnn_models_3d import load_trained_model
 
-data_dir = os.path.join('data', 'SCSeg')
-
-# Loads the image with Nibabel.
-load_data = lambda fpath: nib.load(fpath).get_fdata()
-
 def dice_coefficient(lesion_gt, lesion_seg):
     """ Returns the Dice coefficient for one subject given the ground truth lesion mask and segmentation mask for that subject. """
 
@@ -40,53 +35,6 @@ def voxel_sensitivity(lesion_gt, lesion_seg):
 
 def voxel_precision(lesion_gt, lesion_seg):
     return precision_score(lesion_gt.ravel(), lesion_seg.ravel())
-
-def lesion_sensitivity(lesion_gt, lesion_seg):
-    """ Function to return the proportion of ground truth lesions detected.
-    input:  the ground truth lesion mask image and automated segmentation mask for one subject.
-    returns:  lesion_sensitivity for one subject, and the number of distinct ground truth lesions.
-     """
-    labels_gt = measure.label(lesion_gt)  # Numbers the connected regions (1, 2, 3, etc.)
-
-    # Get the unique ground truth lesions (connected regions) and how many voxels each one covers.
-    labels, count = np.unique(labels_gt, return_counts=True)
-    labels_overlap, count_overlap = np.unique(labels_gt*lesion_seg, return_counts=True)
-
-    detected = 0.0
-    # Loop over the distinct ground truth lesions. If part of this lesion is present in the segmentation mask, 
-    #  check if the overlap is over 25% of the lesion voxels. If so, then the ground truth lesion is considered detected.
-    for i,label in enumerate(labels):
-        if label in labels_overlap:
-            if count_overlap[labels_overlap == label]/count[i] > 0.25:
-                detected += 1.0
-
-    # Return the sensitivity, i.e., number of detected lesions divided by the total number of lesions in the ground truth.
-    # Also return the total number of ground truth lesions.
-    return detected/len(labels), len(labels)
-
-def lesion_precision(lesion_gt, lesion_seg):
-    """ Function to return the proportion of ground truth lesions detected.
-    input:  the ground truth lesion mask image and automated segmentation mask for one subject.
-    returns:  lesion_sensitivity for one subject, and the number of distinct ground truth lesions.
-     """
-    labels_seg = measure.label(lesion_seg)  # Numbers the connected regions (1, 2, 3, etc.)
-
-    # Get the unique lesions (connected regions) in the automatic segmentation and how many voxels each one covers.
-    labels, count = np.unique(labels_seg, return_counts=True)
-    # Get the overlap between the segmentation labels and the ground truth mask.
-    labels_overlap, count_overlap = np.unique(labels_seg*lesion_gt, return_counts=True)
-
-    TP = 0.0
-    # Loop over the distinct segmentation lesions. If part of this lesion was present in the ground truth mask, 
-    #  check if the overlap is over 25% of the lesion voxels. If so, then the detected lesion is considered valid.
-    for i,label in enumerate(labels):
-        if label in labels_overlap:
-            if count_overlap[labels_overlap == label]/count[i] > 0.25:
-                TP += 1.0
-
-    # Return the precision, i.e., number of valid lesions divided by total number of lesions detected. 
-    # Also return the total number of lesions detected.
-    return TP/len(labels), len(labels)
 
 
 models_list = os.listdir(os.path.join('models', 'finetuned'))
@@ -111,12 +59,32 @@ for contrast in ['t2', 't2s']:
     X_test = data_test['im_patches']
     y_test = data_test['lesion_patches']
 
-
     model = load_trained_model(os.path.join('models', 'finetuned', latest_model, contrast, f'best_{contrast}.h5'))
 
-    pred_train = np.zeros((y_train.shape[0], 1, 48,48,48))
-    pred_valid = np.zeros((y_valid.shape[0], 1, 48,48,48))
-    pred_test = np.zeros((y_test.shape[0], 1, 48,48,48))
+    pred_train = np.zeros(y_train.shape)
+    pred_valid = np.zeros(y_valid.shape)
+    pred_test = np.zeros(y_test.shape)
+
+    train_results = np.zeros((y_train.shape[0], 3))
+    valid_results = np.zeros((y_valid.shape[0], 3))
+    test_results = np.zeros((y_test.shape[0], 3))
 
     for i in range(X_train.shape[0]):
         pred_train[i,:,:,:,:] = model.predict(X_train[[i]])
+        train_results[i, 0] = dice_coefficient(X_train[i], pred_train[i])
+        train_results[i, 1] = voxel_sensitivity(X_train[i], pred_train[i])
+        train_results[i, 2] = voxel_precision(X_train[i], pred_train[i])
+
+    for i in range(X_valid.shape[0]):
+        pred_valid[i,:,:,:,:] = model.predict(X_valid[[i]])
+        valid_results[i, 0] = dice_coefficient(X_valid[i], pred_valid[i])
+        valid_results[i, 1] = voxel_sensitivity(X_valid[i], pred_valid[i])
+        valid_results[i, 2] = voxel_precision(X_valid[i], pred_valid[i])
+
+    for i in range(X_test.shape[0]):
+        pred_train[i,:,:,:,:] = model.predict(X_test[[i]])
+        test_results[i, 0] = dice_coefficient(X_test[i], pred_test[i])
+        test_results[i, 1] = voxel_sensitivity(X_test[i], pred_test[i])
+        test_results[i, 2] = voxel_precision(X_test[i], pred_test[i])
+
+    np.savez(f'quick_results_{contrast}.npz', train_results=train_results, valid_results=valid_results, test_results=test_results)
