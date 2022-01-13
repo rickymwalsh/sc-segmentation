@@ -2,8 +2,7 @@ import os
 from random import shuffle
 import sys
 import numpy as np
-from scipy.ndimage.interpolation import shift
-from scipy.ndimage import rotate
+from scipy.ndimage import shift, rotate
 
 def get_training_and_validation_generators(data_file, batch_size,
                                            augment=False, augment_flip=True):
@@ -76,7 +75,7 @@ def flip_image(image, axis):
 def random_shift_image(image, gt, max_offset):
     offset = np.random.randint(-max_offset, high=max_offset+1, size=2, dtype=int)
 
-    return shift(image, (offset[0], offset[1], 0), order=0, mode='nearest'), shift(gt, (offset[0], offset[1], 0), order=0, mode='nearest')
+    return shift(image, (0, offset[0], offset[1], 0), order=0, mode='nearest'), shift(gt, (0, offset[0], offset[1], 0), order=0, mode='nearest')
 
 
 def random_rotate_image(image, gt, max_angle):
