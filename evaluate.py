@@ -260,7 +260,7 @@ def main():
 
     summary_stats['IQR'] = summary_stats['q75'] - summary_stats['q25']
 
-    summary_stats[['model', 'data', 'metric']] = summary_stats['index'].str.split('.', 2, expand=True)
+    summary_stats[['data', 'metric']] = summary_stats['index'].str.split('.', 2, expand=True)
 
     summary_stats.to_csv(os.path.join(results_dir, 'summary_stats.csv'), index=False)
 
