@@ -1,7 +1,7 @@
 import os
 
 config = dict()
-config["seed"] = 260
+config["seed"] = 1301
 config["training_prop"] = 0.59 # Proportion of data for training
 config["validation_prop"] = 0.16 # Proportion of data for validation
 config["train_on_lesion_only"] = True # Whether to only include subjects with at least one lesion in the training/validation set.
