@@ -54,11 +54,10 @@ def add_data(x_list, y_list, data_file, index, augment=False, augment_flip=True)
 
     if augment:
         data, truth = augment_data(data, truth, flip=augment_flip)
-        if random_boolean():
-            data, truth = random_shift_image(data, truth, 10)
-        if random_boolean():
-            data, truth = random_rotate_image(data, truth, 20)
-
+#        if random_boolean():
+#            data, truth = random_shift_image(data, truth, 10)
+#        if random_boolean():
+#            data, truth = random_rotate_image(data, truth, 20)
         
     truth = truth[np.newaxis]
 

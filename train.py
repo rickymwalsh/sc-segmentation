@@ -104,7 +104,7 @@ for contrast in ['t2', 't2s']:
 
     validation_generator, nb_valid_steps = get_training_and_validation_generators(
                                                         [X_valid, y_valid],
-                                                        batch_size=1,
+                                                        batch_size=config["batch_size"],
                                                         augment=False,
                                                         augment_flip=False)
     print(validation_generator,nb_valid_steps)
