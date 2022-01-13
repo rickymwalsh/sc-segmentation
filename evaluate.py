@@ -163,7 +163,7 @@ def compute_scores(model_id, data_split):
                 res_tmp['n_lesion_voxels_seg'] = np.sum(seg)
                 res_tmp['total_voxels'] = len(gt.ravel())
                 res_tmp['lesion_load_gt'] = np.float(res_tmp['n_lesion_voxels_gt'])/res_tmp['total_voxels']
-                res_tmp['lwsion_load_seg'] = np.float(res_tmp['n_lesion_voxels_seg'])/res_tmp['total_voxels']
+                res_tmp['lesion_load_seg'] = np.float(res_tmp['n_lesion_voxels_seg'])/res_tmp['total_voxels']
 
                 # Check if there was at least one lesion in the ground truth. Otherwise these metrics don't apply.
                 if np.max(gt):
