@@ -29,5 +29,6 @@ config["model_name"] = '_'.join([config["gpu_id"],
                                  str(config["learning_rate_patience"])
                                 ])
 
+config["ft_model"] = None  	# Name of fine-tuned model to use for adaptation piece.
 config["finetuned_models"] = 'models/finetuned'  # Relative path of the folder where the fine-tuned models are saved
 config["adapted_models"] = 'models/adapted'  # Relative path of the folder where the adapted models are saved
