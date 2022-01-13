@@ -26,13 +26,14 @@ from preprocessing import normalize_data, crop_images, extract_patches
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-model_id", type=str, help="The id of the model to be evaluated (same as its folder name).")
+parser.add_argument("-adapted", type=0, help="Whether we are evaluating a domain-adapted model (1) or a regular fine-tuned model (0).")
 parser.add_argument("-results_from_file", default=1, type=int, help="Set to 1 if the scores.json file already exists and we want to just calculate summary statistics. \
                                                                     Set to 0 if the segmentations and subject scores need to be generated.")
 args = parser.parse_args()
 
 results_from_file = args.results_from_file
 model_id = args.model_id
-
+adapted = args.adapted
 
 def dice_coefficient(lesion_gt, lesion_seg):
     """ Returns the Dice coefficient for one subject given the ground truth lesion mask and segmentation mask for that subject. """
@@ -198,7 +199,10 @@ def compute_scores(model_id, data_split):
 
 def main():
 
-    model_dir = os.path.join('models', 'finetuned', model_id)
+    if adapted:
+        model_dir = os.path.join('models', 'adapted', model_id)
+    else:
+        model_dir = os.path.join('models', 'finetuned', model_id)
 
     # Retrieve the relevant train-test-split used for this model.
     with open(os.path.join(model_dir, 'config.json'), 'r') as f:
