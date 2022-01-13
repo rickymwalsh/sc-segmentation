@@ -237,34 +237,32 @@ def main():
 
     df.to_csv(os.path.join(results_dir, 'subject_scores.csv'), index=False)
 
-    # # df[['sct.t2.true_negative', 'sct.t2s.true_negative']] \
-    # subj_specificity = df[['sct.t2s.true_negative']] \
-    #     .mean(skipna=True) \
-    #     .to_frame(name='specificity') \
-    #     .rename({
-    #         # 'sct.t2.true_negative': 'sct.t2.subject_specificity',
-    #         'sct.t2s.true_negative': 'sct.t2s.subject_specificity'
-    #         }) 
+    subj_specificity = df[['t2.true_negative', 't2s.true_negative']] \
+        .mean(skipna=True) \
+        .to_frame(name='specificity') \
+        .rename({
+            't2.true_negative': 't2.subject_specificity',
+            't2s.true_negative': 't2s.subject_specificity'
+            }) 
 
-    # # summary_stats = df.drop(columns=['subject','sct.t2.true_negative', 'sct.t2s.true_negative'],axis=1) \
-    # summary_stats = df.drop(columns=['subject', 'sct.t2s.true_negative'],axis=1) \
-    #     .agg([
-    #         np.nanmedian, 
-    #         lambda x: x.quantile(q=0.25),
-    #         lambda x: x.quantile(q=0.75)]) \
-    #     .T 
+    summary_stats = df.drop(columns=['subject','t2.true_negative', 't2s.true_negative'],axis=1) \
+        .agg([
+            np.nanmedian, 
+            lambda x: x.quantile(q=0.25),
+            lambda x: x.quantile(q=0.75)]) \
+        .T 
 
-    # summary_stats.columns = ['median', 'q25', 'q75']
+    summary_stats.columns = ['median', 'q25', 'q75']
 
-    # summary_stats = summary_stats \
-    #     .append(subj_specificity) \
-    #     .reset_index()
+    summary_stats = summary_stats \
+        .append(subj_specificity) \
+        .reset_index()
 
-    # summary_stats['IQR'] = summary_stats['q75'] - summary_stats['q25']
+    summary_stats['IQR'] = summary_stats['q75'] - summary_stats['q25']
 
-    # summary_stats[['model', 'data', 'metric']] = summary_stats['index'].str.split('.', 2, expand=True)
+    summary_stats[['model', 'data', 'metric']] = summary_stats['index'].str.split('.', 2, expand=True)
 
-    # summary_stats.to_csv(os.path.join('results', 'summary_stats.csv'), index=False)
+    summary_stats.to_csv(os.path.join(results_dir, 'summary_stats.csv'), index=False)
 
 if __name__=="__main__":
     main()
