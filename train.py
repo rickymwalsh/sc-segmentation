@@ -126,6 +126,8 @@ for contrast in ['t2', 't2s']:
     ## Test model is working.
     # print("Test:", model.predict(X_train[[0]]).shape)
 
+    K.set_value(model.optimizer.learning_rate, 2.5e-5)
+
     model.fit(train_generator,
                 steps_per_epoch=nb_train_steps,
                 epochs=config["n_epochs"],
