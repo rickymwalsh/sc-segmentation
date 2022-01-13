@@ -96,17 +96,27 @@ def main():
 			print(f'Processing {subset} ({contrast}) data')
 			im_patches = []; lesion_patches = []
 			for subj in tqdm(data_split[subset]):
-				# Read the image and its associated lesion mask.
-				im_orig = Image(data_split[subset][subj][contrast+'_path'])
-				im_lesion = Image(data_split[subset][subj]['lesion_path'])
+				# Path where the cropped (48x48) images are saved.		
+				im_cropped_path = add_suffix(data_split[subset][subj][contrast+'_path'], '_crop')
+				lesion_cropped_path = add_suffix(data_split[subset][subj]['lesion_path'], f'_crop_{contrast}')
+				
+				# Check if the cropped images already exist.
+				if os.path.isfile(im_cropped_path) & os.path.isfile(lesion_cropped_path):
+					im_cropped = Image(im_cropped_path)
+					lesion_cropped = Image(lesion_cropped_path)
 
-				# Crop the image and its associated lesion mask around the SC.
-				im_cropped, lesion_cropped = crop_images(
-					im_orig, im_lesion, contrast=contrast, crop_size=patch_size[0])
+				else:
+					# Read the image and its associated lesion mask.
+					im_orig = Image(data_split[subset][subj][contrast+'_path'])
+					im_lesion = Image(data_split[subset][subj]['lesion_path'])
 
-				# Save the cropped images to file.
-				im_cropped.save(add_suffix(im_orig.absolutepath, '_crop'))
-				lesion_cropped.save(add_suffix(im_lesion.absolutepath, f'_crop_{contrast}'))
+					# Crop the image and its associated lesion mask around the SC.
+					im_cropped, lesion_cropped = crop_images(
+						im_orig, im_lesion, contrast=contrast, crop_size=patch_size[0])
+
+					# Save the cropped images to file.
+					im_cropped.save(im_cropped_path)
+					lesion_cropped.save(lesion_cropped_path)
 
 				# Apply Nyul-like percentiles normalization.
 				im_cropped = apply_intensity_normalization(im_cropped, contrast)
