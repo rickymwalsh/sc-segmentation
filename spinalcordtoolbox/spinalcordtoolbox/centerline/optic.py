@@ -8,9 +8,9 @@ import logging
 
 import numpy as np
 
-from spinalcordtoolbox.image import Image
-from spinalcordtoolbox.utils.sys import sct_dir_local_path, run_proc
-from spinalcordtoolbox.utils.fs import extract_fname, copy, TempFolder
+from spinalcordtoolbox.spinalcordtoolbox.image import Image
+from spinalcordtoolbox.spinalcordtoolbox.utils.sys import sct_dir_local_path, run_proc
+from spinalcordtoolbox.spinalcordtoolbox.utils.fs import extract_fname, copy, TempFolder
 
 logger = logging.getLogger(__name__)
 

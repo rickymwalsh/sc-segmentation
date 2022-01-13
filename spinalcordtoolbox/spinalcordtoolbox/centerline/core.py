@@ -131,7 +131,7 @@ def get_centerline(im_seg, param=ParamCenterline(), verbose=1):
         fig_title = 'Algo={}, Smooth={}'.format(param.algo_fitting, param.smooth)
 
     elif param.algo_fitting == 'nurbs':
-        from spinalcordtoolbox.centerline.nurbs import b_spline_nurbs
+        from spinalcordtoolbox.spinalcordtoolbox.centerline.nurbs import b_spline_nurbs
         point_number = 3000
         # Interpolate such that the output centerline has the same length as z_ref
         x_mean_interp, _ = curve_fitting.linear(z_mean, x_mean, z_ref, 0)
@@ -148,7 +148,7 @@ def get_centerline(im_seg, param=ParamCenterline(), verbose=1):
         # This method is particular compared to the previous ones, as here we estimate the centerline based on the
         # image itself (not the segmentation). Hence, we can bypass the fitting procedure and centerline creation
         # and directly output results.
-        from spinalcordtoolbox.centerline import optic
+        from spinalcordtoolbox.spinalcordtoolbox.centerline import optic
         assert param.contrast is not None
         im_centerline = optic.detect_centerline(im_seg, param.contrast, verbose)
         x_centerline_fit, y_centerline_fit, z_centerline = find_and_sort_coord(im_centerline)
@@ -269,8 +269,8 @@ def _call_viewer_centerline(im_data, interslice_gap=20.0):
     :param interslice_gap:
     :return: Image() of labels.
     """
-    from spinalcordtoolbox.gui.base import AnatomicalParams
-    from spinalcordtoolbox.gui.centerline import launch_centerline_dialog
+    from spinalcordtoolbox.spinalcordtoolbox.gui.base import AnatomicalParams
+    from spinalcordtoolbox.spinalcordtoolbox.gui.centerline import launch_centerline_dialog
 
     if not isinstance(im_data, Image):
         raise ValueError("Expecting an image")
