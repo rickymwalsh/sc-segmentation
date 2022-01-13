@@ -12,14 +12,13 @@ import pickle
 import random
 from datetime import datetime
 import json
-# import commands
+import argparse
 from sklearn.utils import shuffle
 
 import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau
 
-# from utils import fetch_data_files, visualize_data, normalize_data, load_3Dpatches, train_model
 from generator import get_training_and_validation_generators
 
 # Add the spinalcordtoolbox location to the system path.
@@ -30,6 +29,14 @@ sys.path.append(path_to_sct)
 
 from spinalcordtoolbox.image import Image
 from spinalcordtoolbox.deepseg_sc.cnn_models_3d import load_trained_model
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-model_id", type=str, help="The id of the model to be evaluated (same as its folder name).")
+parser.add_argument("-results_from_file", default=1, type=int, help="Set to 1 if the scores.json file already exists and we want to just calculate summary statistics. \
+                                                                    Set to 0 if the segmentations and subject scores need to be generated.")
+args = parser.parse_args()
+
+results_from_file = args.results_from_file
 
 K.set_image_data_format('channels_first')
 
@@ -55,7 +62,10 @@ else:
 config['timestamp'] = datetime.now().strftime('%Y%m%d%H%M%S')
 
 # Create a separate directory for each new model (experiment) trained.
-model_dir = os.path.join(config["finetuned_models"], config['timestamp'] + '_' + config["model_name"])
+if adapt:
+    model_dir = os.path.join(config["adapted_models"], config['timestamp'] + '_' + config["model_name"])
+else:
+    model_dir = os.path.join(config["finetuned_models"], config['timestamp'] + '_' + config["model_name"])
 if not os.path.isdir(model_dir):
     os.mkdir(model_dir)
 
@@ -66,8 +76,14 @@ with open(os.path.join(model_dir, 'config.json'), 'w') as f:
 for contrast in ['t2', 't2s']:
     print(contrast, '....')
 
-    if not os.path.isdir(os.path.join(model_dir, contrast)):
-        os.mkdir(os.path.join(model_dir, contrast))
+    opposite_contrast = 't2' if contrast=='t2s' else 't2s'
+
+    if adapt:
+        if not os.path.isdir(os.path.join(model_dir, f'{opposite_contrast}_to_{contrast}')):
+            os.mkdir(os.path.join(model_dir, f'{opposite_contrast}_to_{contrast}'))
+    else:
+         if not os.path.isdir(os.path.join(model_dir, contrast)):
+            os.mkdir(os.path.join(model_dir, contrast))       
     
     # Load the whole set of preprocessed data.
     data_train = np.load(os.path.join(preprocessed_path, f'training_{contrast}_{contrast}.npz'))
@@ -100,7 +116,17 @@ for contrast in ['t2', 't2s']:
                                                         augment_flip=False)
     print(validation_generator,nb_valid_steps)
 
-    model_fname = os.path.join('sct_deepseg_lesion_models', f'{contrast}_lesion.h5')
+    if adapt:
+        if config['finetuned_model'] is not None:
+            model_fname = os.path.join('models','finetuned',config['finetuned_model'], opposite_contrast, f'best_{opposite_contrast}.h5')
+        else:
+        # Otherwise take the most recent one.
+            ft_models = os.listdir(os.path.join('models','finetuned'))
+            model_tstamps = [int(f[:14]) for f in ft_models]
+            ft_model_name = ft_models[model_tstamps.index(max(model_tstamps))]
+            model_fname = os.path.join('models','finetuned',ft_model_name, opposite_contrast, f'best_{opposite_contrast}.h5')
+    else:
+        model_fname = os.path.join('sct_deepseg_lesion_models', f'{contrast}_lesion.h5')
     model = load_trained_model(model_fname)
     ## Test model is working.
     # print("Test:", model.predict(X_train[[0]]).shape)
@@ -118,7 +144,4 @@ for contrast in ['t2', 't2s']:
                     )
                 )
 
-    # TODO: Add in model checkpoint.
-
-# TODO: Add JDOT model - use Class saved in other module.
 
