@@ -9,11 +9,11 @@ import numpy as np
 from scipy.interpolate.interpolate import interp1d
 import nibabel as nib
 
-from spinalcordtoolbox.image import Image, add_suffix, zeros_like, empty_like
-from spinalcordtoolbox.deepseg_sc.core import find_centerline, crop_image_around_centerline, uncrop_image, _normalize_data
-from spinalcordtoolbox import resampling
-from spinalcordtoolbox.utils import sct_dir_local_path, TempFolder
-from spinalcordtoolbox.deepseg_sc.cnn_models_3d import load_trained_model
+from spinalcordtoolbox.spinalcordtoolbox.image import Image, add_suffix, zeros_like, empty_like
+from spinalcordtoolbox.spinalcordtoolbox.deepseg_sc.core import find_centerline, crop_image_around_centerline, uncrop_image, _normalize_data
+from spinalcordtoolbox.spinalcordtoolbox import resampling
+from spinalcordtoolbox.spinalcordtoolbox.utils import sct_dir_local_path, TempFolder
+from spinalcordtoolbox.spinalcordtoolbox.deepseg_sc.cnn_models_3d import load_trained_model
 
 
 logger = logging.getLogger(__name__)

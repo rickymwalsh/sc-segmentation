@@ -14,9 +14,9 @@ import datetime
 import logging
 import wquantiles
 
-from spinalcordtoolbox.template import get_slices_from_vertebral_levels, get_vertebral_level_from_slice
-from spinalcordtoolbox.image import Image
-from spinalcordtoolbox.utils import __version__, parse_num_list_inv
+from spinalcordtoolbox.spinalcordtoolbox.template import get_slices_from_vertebral_levels, get_vertebral_level_from_slice
+from spinalcordtoolbox.spinalcordtoolbox.image import Image
+from spinalcordtoolbox.spinalcordtoolbox.utils import __version__, parse_num_list_inv
 
 
 class Metric:

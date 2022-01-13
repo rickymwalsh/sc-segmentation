@@ -10,15 +10,9 @@ from sklearn.model_selection import train_test_split
 # Local modules
 from config_file import config
 
-# Add the spinalcordtoolbox location to the system path.
-import sys
-from os.path import dirname, abspath, join as oj
-path_to_sct = oj(dirname(abspath(__file__)), 'spinalcordtoolbox')
-sys.path.append(path_to_sct)
-
-from spinalcordtoolbox.image import Image, add_suffix
-from spinalcordtoolbox.deepseg_lesion.core import apply_intensity_normalization
-from spinalcordtoolbox.deepseg_sc.core import find_centerline, crop_image_around_centerline
+from spinalcordtoolbox.spinalcordtoolbox.image import Image, add_suffix
+from spinalcordtoolbox.spinalcordtoolbox.deepseg_lesion.core import apply_intensity_normalization
+from spinalcordtoolbox.spinalcordtoolbox.deepseg_sc.core import find_centerline, crop_image_around_centerline
 
 def normalize_data(data, contrast):
 	"""Function to normalize data based on learned mean and std from SCT project."""

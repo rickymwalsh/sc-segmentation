@@ -11,13 +11,13 @@ from skimage.exposure import rescale_intensity
 from scipy.ndimage.measurements import center_of_mass, label
 from scipy.ndimage import distance_transform_edt
 
-from spinalcordtoolbox import resampling
+from spinalcordtoolbox.spinalcordtoolbox import resampling
 from .cnn_models import nn_architecture_seg, nn_architecture_ctr
 from .postprocessing import post_processing_volume_wise, keep_largest_object, fill_holes_2d
-from spinalcordtoolbox.image import Image, empty_like, change_type, zeros_like, add_suffix, concat_data, split_img_data
-from spinalcordtoolbox.centerline.core import ParamCenterline, get_centerline, _call_viewer_centerline
-from spinalcordtoolbox.utils import sct_dir_local_path, TempFolder
-from spinalcordtoolbox.deepseg_sc.cnn_models_3d import load_trained_model
+from spinalcordtoolbox.spinalcordtoolbox.image import Image, empty_like, change_type, zeros_like, add_suffix, concat_data, split_img_data
+from spinalcordtoolbox.spinalcordtoolbox.centerline.core import ParamCenterline, get_centerline, _call_viewer_centerline
+from spinalcordtoolbox.spinalcordtoolbox.utils import sct_dir_local_path, TempFolder
+from spinalcordtoolbox.spinalcordtoolbox.deepseg_sc.cnn_models_3d import load_trained_model
 
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'

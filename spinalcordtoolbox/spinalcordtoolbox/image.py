@@ -23,14 +23,14 @@ from typing import Sequence
 import nibabel as nib
 import numpy as np
 import pathlib
-from contrib import fslhd
+from spinalcordtoolbox.contrib import fslhd
 
 import transforms3d.affines as affines
 import re
 from scipy.ndimage import map_coordinates
 
-from spinalcordtoolbox.types import Coordinate
-from spinalcordtoolbox.utils import extract_fname, sct_dir_local_path
+from spinalcordtoolbox.spinalcordtoolbox.types import Coordinate
+from spinalcordtoolbox.spinalcordtoolbox.utils import extract_fname, sct_dir_local_path
 
 logger = logging.getLogger(__name__)
 

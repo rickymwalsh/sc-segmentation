@@ -7,16 +7,10 @@ import pandas as pd
 from datetime import datetime
 from sklearn.model_selection import train_test_split
 
-# Local config_file.py
+# Local files
 from config_file import config
 
-# Add the spinalcordtoolbox location to the system path.
-import sys
-from os.path import dirname, abspath, join as oj
-path_to_sct = oj(dirname(abspath(__file__)), 'spinalcordtoolbox')
-sys.path.append(path_to_sct)
-
-from spinalcordtoolbox.image import Image
+from spinalcordtoolbox.spinalcordtoolbox.image import Image
 
 def get_data_split(train_prop=0.7, valid_prop=0.1, train_on_lesion_only=True, random_state=None):
 

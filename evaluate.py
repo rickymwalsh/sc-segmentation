@@ -16,16 +16,11 @@ import json
 from copy import deepcopy
 import argparse
 
-# Add the spinalcordtoolbox location to the system path.
-import sys
-from os.path import dirname, abspath, join as oj
-path_to_sct = oj(dirname(abspath(__file__)), 'spinalcordtoolbox')
-sys.path.append(path_to_sct)
-
-from spinalcordtoolbox.image import Image, add_suffix, zeros_like
-from spinalcordtoolbox.deepseg_lesion.core import apply_intensity_normalization, segment_3d
-from spinalcordtoolbox.deepseg_sc.core import find_centerline, crop_image_around_centerline
-from spinalcordtoolbox.deepseg_sc.cnn_models_3d import load_trained_model
+# Local Modules.
+from spinalcordtoolbox.spinalcordtoolbox.image import Image, add_suffix, zeros_like
+from spinalcordtoolbox.spinalcordtoolbox.deepseg_lesion.core import apply_intensity_normalization, segment_3d
+from spinalcordtoolbox.spinalcordtoolbox.deepseg_sc.core import find_centerline, crop_image_around_centerline
+from spinalcordtoolbox.spinalcordtoolbox.deepseg_sc.cnn_models_3d import load_trained_model
 
 from preprocessing import normalize_data, crop_images, extract_patches
 

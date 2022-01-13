@@ -19,24 +19,17 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau
 
+# Local modules
 from generator import get_training_and_validation_generators
 
-# Add the spinalcordtoolbox location to the system path.
-import sys
-from os.path import dirname, abspath, join as oj
-path_to_sct = oj(dirname(abspath(__file__)), 'spinalcordtoolbox')
-sys.path.append(path_to_sct)
+from spinalcordtoolbox.spinalcordtoolbox.image import Image
+from spinalcordtoolbox.spinalcordtoolbox.deepseg_sc.cnn_models_3d import load_trained_model
 
-from spinalcordtoolbox.image import Image
-from spinalcordtoolbox.deepseg_sc.cnn_models_3d import load_trained_model
-
+# Parse whether we should fine-tune on same contrast or adapt to other contrast.
 parser = argparse.ArgumentParser()
-parser.add_argument("-model_id", type=str, help="The id of the model to be evaluated (same as its folder name).")
-parser.add_argument("-results_from_file", default=1, type=int, help="Set to 1 if the scores.json file already exists and we want to just calculate summary statistics. \
-                                                                    Set to 0 if the segmentations and subject scores need to be generated.")
+parser.add_argument("-adapt", type=int,default=0, help="Should the models be finetuned on images of the same contrast (0) or adapted to the other contrast (1).")
 args = parser.parse_args()
-
-results_from_file = args.results_from_file
+adapt = args.adapt
 
 K.set_image_data_format('channels_first')
 
@@ -116,6 +109,7 @@ for contrast in ['t2', 't2s']:
                                                         augment_flip=False)
     print(validation_generator,nb_valid_steps)
 
+    # Load relevant trained model.
     if adapt:
         if config['finetuned_model'] is not None:
             model_fname = os.path.join('models','finetuned',config['finetuned_model'], opposite_contrast, f'best_{opposite_contrast}.h5')
@@ -127,6 +121,7 @@ for contrast in ['t2', 't2s']:
             model_fname = os.path.join('models','finetuned',ft_model_name, opposite_contrast, f'best_{opposite_contrast}.h5')
     else:
         model_fname = os.path.join('sct_deepseg_lesion_models', f'{contrast}_lesion.h5')
+
     model = load_trained_model(model_fname)
     ## Test model is working.
     # print("Test:", model.predict(X_train[[0]]).shape)

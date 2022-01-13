@@ -6,8 +6,8 @@
 import logging
 import numpy as np
 
-from spinalcordtoolbox.image import Image, zeros_like
-from spinalcordtoolbox.centerline import curve_fitting
+from spinalcordtoolbox.spinalcordtoolbox.image import Image, zeros_like
+from spinalcordtoolbox.spinalcordtoolbox.centerline import curve_fitting
 
 logger = logging.getLogger(__name__)
 
