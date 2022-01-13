@@ -111,8 +111,8 @@ for contrast in ['t2', 't2s']:
 
     # Load relevant trained model.
     if adapt:
-        if config['finetuned_model'] is not None:
-            model_fname = os.path.join('models','finetuned',config['finetuned_model'], opposite_contrast, f'best_{opposite_contrast}.h5')
+        if config['ft_model'] is not None:
+            model_fname = os.path.join('models','finetuned',config['ft_model'], opposite_contrast, f'best_{opposite_contrast}.h5')
         else:
         # Otherwise take the most recent one.
             ft_models = os.listdir(os.path.join('models','finetuned'))
