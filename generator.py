@@ -51,7 +51,7 @@ def convert_data(x_list, y_list, batch_size):
 def add_data(x_list, y_list, data_file, index, augment=False, augment_flip=True):
     data = data_file[0][index]
     truth = data_file[1][index, 0, :, :, :]
-    
+
     if augment:
         data, truth = augment_data(data, truth, flip=augment_flip)
         if random_boolean():
@@ -75,13 +75,13 @@ def flip_image(image, axis):
 def random_shift_image(image, gt, max_offset):
     offset = np.random.randint(-max_offset, high=max_offset+1, size=2, dtype=int)
 
-    return shift(image, (0, offset[0], offset[1], 0), order=0, mode='nearest'), shift(gt, (0, offset[0], offset[1], 0), order=0, mode='nearest')
+    return shift(image, (0, offset[0], offset[1], 0), order=0, mode='nearest'), shift(gt, (offset[0], offset[1], 0), order=0, mode='nearest')
 
 
 def random_rotate_image(image, gt, max_angle):
-    angle = np.random.randint(-max_angle, high=max_angle+1, size=1, dtype=int)
-
-    return rotate(image, angle, reshape=False, order=0), rotate(image, angle, reshape=False, order=0)
+    angle = np.random.randint(-max_angle, high=max_angle+1, size=1, dtype=int)[0]
+    
+    return rotate(image, angle, reshape=False, order=0), rotate(gt, angle, reshape=False, order=0)
 
 
 def random_flip_dimensions(n_dimensions):
