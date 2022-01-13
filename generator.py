@@ -2,6 +2,8 @@ import os
 from random import shuffle
 import sys
 import numpy as np
+from scipy.ndimage.interpolation import shift
+from scipy.ndimage import rotate
 
 def get_training_and_validation_generators(data_file, batch_size,
                                            augment=False, augment_flip=True):
@@ -53,6 +55,11 @@ def add_data(x_list, y_list, data_file, index, augment=False, augment_flip=True)
     
     if augment:
         data, truth = augment_data(data, truth, flip=augment_flip)
+        if random_boolean():
+            data, truth = random_shift_image(data, truth, 10)
+        if random_boolean():
+            data, truth = random_rotate_image(data, truth, 20)
+
         
     truth = truth[np.newaxis]
 
@@ -65,6 +72,17 @@ def flip_image(image, axis):
     for axis_index in axis:
         new_data = np.flip(new_data, axis=axis_index)
     return new_data
+
+def random_shift_image(image, gt, max_offset):
+    offset = np.random.randint(-max_offset, high=max_offset+1, size=2, dtype=int)
+
+    return shift(image, (offset[0], offset[1], 0), order=0, mode='nearest'), shift(gt, (offset[0], offset[1], 0), order=0, mode='nearest')
+
+
+def random_rotate_image(image, gt, max_angle):
+    angle = np.random.randint(-max_angle, high=max_angle+1, size=1, dtype=int)
+
+    return rotate(image, angle, reshape=False, order=0), rotate(image, angle, reshape=False, order=0)
 
 
 def random_flip_dimensions(n_dimensions):
@@ -79,7 +97,7 @@ def random_boolean():
     return np.random.choice([True, False])
 
 
-def augment_data(data, truth, flip=True):
+def augment_data(data, truth, flip=True, shift=True):
     n_dim = len(truth.shape)
 
     if flip:
