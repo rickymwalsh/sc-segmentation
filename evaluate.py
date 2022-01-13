@@ -250,6 +250,7 @@ def main():
             }) 
 
     summary_stats = df.drop(columns=['subject','t2.true_negative', 't2s.true_negative'],axis=1) \
+        .groupby(by='subset') \
         .agg([
             np.nanmedian, 
             lambda x: x.quantile(q=0.25),
