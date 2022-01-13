@@ -2,8 +2,8 @@ import os
 
 config = dict()
 config["seed"] = 260
-config["training_prop"] = 0.7 # Proportion of data for training
-config["validation_prop"] = 0.1 # Proportion of data for validation
+config["training_prop"] = 0.59 # Proportion of data for training
+config["validation_prop"] = 0.16 # Proportion of data for validation
 config["train_on_lesion_only"] = True # Whether to only include subjects with at least one lesion in the training/validation set.
 config["train_test_split"] = None	# Can specify the file containing a specific train/test split 
 config["preprocessed_data_file"] = None 	# Can specify the directory containing a specific set of preprocessed data.
@@ -18,7 +18,7 @@ config["learning_rate_patience"] = 10  # Number of epochs after which the learni
 
 config["gpu_id"] = '1'
 config["data_dir"] = 'data/SCSeg/'
-# Temporary fix to run the training script **TODO: Create data dict with training subjects.
+# Temporary fix to run the training script 
 config["data_dict"] = 'results/scores.json'  # pickle file containing a dictionary with at least the following keys: subject and contrast_foldname
 
 # Model name containing the main parameters, which is useful for the hyperparm optimization
