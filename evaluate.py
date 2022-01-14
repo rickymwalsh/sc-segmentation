@@ -272,25 +272,26 @@ def main():
             't2s-model_t2s-data.true_negative': 't2s-model_t2s-data.subject_specificity'
             }) 
 
-    summary_stats = df.drop(columns=['subject','t2-model_t2-data.true_negative', 't2-model_t2s-data.true_negative', \
-                                    't2s-model_t2-data.true_negative', 't2s-model_t2s-data.true_negative'], axis=1) \
+    # Define custom aggregation functions.
+    def q1(x): return x.quantile(q=0.25)
+    def q3(x): return x.quantile(q=0.75)
+    def IQR(x): return q3(x) - q1(x)
+
+
+    summary_stats = df \
+        .drop(columns=['subject','t2-model_t2-data.true_negative', 't2-model_t2s-data.true_negative', \
+                        't2s-model_t2-data.true_negative', 't2s-model_t2s-data.true_negative'], axis=1) \
         .groupby(by='subset') \
-        .agg([
-            np.nanmedian, 
-            lambda x: x.quantile(q=0.25),
-            lambda x: x.quantile(q=0.75)])# \
-       # .T 
+        .agg([np.nanmedian, q1, q3, IQR]) \
+        .T  
 
     print(summary_stats.head())
-    summary_stats.columns = ['subset', 'median', 'q25', 'q75']
 
     summary_stats = summary_stats \
         .append(subj_specificity) \
         .reset_index()
 
-    summary_stats['IQR'] = summary_stats['q75'] - summary_stats['q25']
-
-    summary_stats[['model-data', 'metric']] = summary_stats['index'].str.split('.', 2, expand=True)
+    summary_stats[['model--data', 'metric']] = summary_stats['index'].str.split('.', 2, expand=True)
 
     summary_stats.to_csv(os.path.join(results_dir, 'summary_stats.csv'), index=False)
 
