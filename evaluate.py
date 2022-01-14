@@ -132,10 +132,10 @@ def generate_predictions(model_id, data_split, adapted=False):
         if model_id=='sct':
             model = load_trained_model(os.path.join('sct_deepseg_lesion_models', f'{model_contrast}_lesion.h5'))
         elif adapted:
-            opposite_contrast = 't2s' if model_contrast=='t2' else 't2s'
+            opposite_contrast = 't2s' if model_contrast=='t2' else 't2'
             model = load_trained_model(os.path.join('models', 'adapted', model_id, f'{opposite_contrast}_to_{model_contrast}', f'best_{opposite_contrast}_to_{model_contrast}.h5'))            
         else:
-            model = load_trained_model(os.path.join('models', 'finetuned', model_id, contrast, f'best_{model_contrast}.h5'))
+            model = load_trained_model(os.path.join('models', 'finetuned', model_id, model_contrast, f'best_{model_contrast}.h5'))
 
         # We want to also test the t2 model on the t2s data for example, so need all 4 variations of model_contrast->data_contrast
         for data_contrast in ['t2','t2s']:
@@ -240,7 +240,7 @@ def main():
 
     if results_from_file==0:
         # Get all of the segmentations and write them to file.
-        generate_predictions(model_id, data_split)
+        generate_predictions(model_id, data_split, adapted=adapted)
 
         # Get all of the result scores for the model.
         scores = compute_scores(model_id, data_split)
@@ -262,15 +262,19 @@ def main():
 
     df.to_csv(os.path.join(results_dir, 'subject_scores.csv'), index=False)
 
-    subj_specificity = df[['t2-model_t2-data.true_negative', 't2-model_t2s-data.true_negative', 't2s-model_t2-data.true_negative', 't2s-model_t2s-data.true_negative']] \
+    subj_specificity = df[df['subset']=='test']  \
+        .filter(['t2-model_t2-data.true_negative', 't2-model_t2s-data.true_negative', 't2s-model_t2-data.true_negative', 't2s-model_t2s-data.true_negative'], axis=1) \
         .mean(skipna=True) \
-        .to_frame(name='specificity') \
         .rename({
             't2-model_t2-data.true_negative': 't2-model_t2-data.subject_specificity',
             't2-model_t2s-data.true_negative': 't2-model_t2s-data.subject_specificity',
             't2s-model_t2-data.true_negative': 't2s-model_t2-data.subject_specificity',
             't2s-model_t2s-data.true_negative': 't2s-model_t2s-data.subject_specificity'
-            }) 
+            }) \
+        .reset_index() \
+        .rename({'index':'level_0'}, axis=1)
+
+    print(subj_specificity.head())
 
     # Define custom aggregation functions.
     def q1(x): return x.quantile(q=0.25)
@@ -288,13 +292,16 @@ def main():
         .agg([np.nanmedian, q1, q3, IQR]) \
         .T  
 
-    summary_stats = summary_stats \
-        .append(subj_specificity) \
-        .reset_index()
+    summary_stats = summary_stats.reset_index() \
+            .append(subj_specificity) \
+            .rename({'level_1':'measure'}, axis=1)    
+    
+    summary_stats[['model--data', 'metric']] = summary_stats['level_0'].str.split('.', 2, expand=True)
+    summary_stats[['model','data']] = summary_stats['model--data'].str.split('_',2, expand=True)
 
-    summary_stats[['model--data', 'metric']] = summary_stats['index'].str.split('.', 2, expand=True)
-
-    summary_stats.to_csv(os.path.join(results_dir, 'summary_stats.csv'), index=False)
+    summary_stats \
+            .drop(columns=['level_0','model--data'], axis=1) \
+            .to_csv(os.path.join(results_dir, 'summary_stats.csv'), index=False)
 
     print(summary_stats.head())
 
