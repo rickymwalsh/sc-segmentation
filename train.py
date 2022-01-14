@@ -34,8 +34,8 @@ adapt = args.adapt
 K.set_image_data_format('channels_first')
 
 def get_callbacks(path2save, fname, learning_rate_drop=None, learning_rate_patience=50):
-    model_checkpoint_best = ModelCheckpoint(path2save + '/best_' + fname + '.h5', save_best_only=True)
-    tensorboard = TensorBoard(log_dir=path2save + "/logs/{}".format(fname))
+    model_checkpoint_best = ModelCheckpoint(os.path.join(path2save, f'best_{fname}.h5'), save_best_only=True)
+    tensorboard = TensorBoard(log_dir= os.path.join(path2save, "/logs"))
     if learning_rate_drop:
         patience = ReduceLROnPlateau(factor=learning_rate_drop, patience=learning_rate_patience, verbose=1)
         return [model_checkpoint_best, tensorboard, patience]
@@ -72,11 +72,13 @@ for contrast in ['t2', 't2s']:
     opposite_contrast = 't2' if contrast=='t2s' else 't2s'
 
     if adapt:
-        if not os.path.isdir(os.path.join(model_dir, f'{opposite_contrast}_to_{contrast}')):
-            os.mkdir(os.path.join(model_dir, f'{opposite_contrast}_to_{contrast}'))
+        model_save_name = f'{opposite_contrast}_to_{contrast}'
+        if not os.path.isdir(os.path.join(model_dir, model_save_name)):
+            os.mkdir(os.path.join(model_dir, model_save_name))
     else:
-         if not os.path.isdir(os.path.join(model_dir, contrast)):
-            os.mkdir(os.path.join(model_dir, contrast))       
+        model_save_name = contrast      
+         if not os.path.isdir(os.path.join(model_dir, model_save_name)):
+            os.mkdir(os.path.join(model_dir, model_save_name)) 
     
     # Load the whole set of preprocessed data.
     data_train = np.load(os.path.join(preprocessed_path, f'training_{contrast}_{contrast}.npz'))
@@ -122,12 +124,13 @@ for contrast in ['t2', 't2s']:
     else:
         model_fname = os.path.join('sct_deepseg_lesion_models', f'{contrast}_lesion.h5')
 
+    # Load the original SCT model or the finetuned model, as applicable.
     model = load_trained_model(model_fname)
-    ## Test model is working.
-    # print("Test:", model.predict(X_train[[0]]).shape)
 
+    # Set the LR for domain adaptation to be 1/10 of the LR for the original SCT models.
     if adapt:
         K.set_value(model.optimizer.learning_rate, 5e-6)
+    # Set the LR for fine-tuning to be 1/2 of the LR of the original SCT models.
     else:
         K.set_value(model.optimizer.learning_rate, 2.5e-5)
 
@@ -137,8 +140,8 @@ for contrast in ['t2', 't2s']:
                 validation_data=validation_generator,
                 validation_steps=nb_valid_steps,
                 callbacks=get_callbacks(
-                    os.path.join(model_dir, contrast), 
-                    contrast,
+                    os.path.join(model_dir, model_save_name), 
+                    model_save_name,
                     learning_rate_drop=config["learning_rate_drop"],
                     learning_rate_patience=config["learning_rate_patience"]
                     )
