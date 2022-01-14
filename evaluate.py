@@ -277,9 +277,9 @@ def main():
     def q3(x): return x.quantile(q=0.75)
     def IQR(x): return q3(x) - q1(x)
 
-    df['subset'] = np.where(df['subset']=='test' & df['t2-model_t2-data.nlesions_gt']==0, 'test_no_lesions',
+    df['subset'] = np.where((df['subset']=='test') & (df['t2-model_t2-data.nlesions_gt']==0), 'test_no_lesions',
                         np.where(df['subset']=='test', 'test_lesions',
-                            df['subset'])
+                            df['subset']))
 
     summary_stats = df \
         .drop(columns=['subject','t2-model_t2-data.true_negative', 't2-model_t2s-data.true_negative', \
@@ -288,8 +288,6 @@ def main():
         .agg([np.nanmedian, q1, q3, IQR]) \
         .T  
 
-    print(summary_stats.head())
-
     summary_stats = summary_stats \
         .append(subj_specificity) \
         .reset_index()
@@ -297,6 +295,8 @@ def main():
     summary_stats[['model--data', 'metric']] = summary_stats['index'].str.split('.', 2, expand=True)
 
     summary_stats.to_csv(os.path.join(results_dir, 'summary_stats.csv'), index=False)
+
+    print(summary_stats.head())
 
 if __name__=="__main__":
     main()
