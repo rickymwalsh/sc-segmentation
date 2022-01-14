@@ -35,7 +35,7 @@ K.set_image_data_format('channels_first')
 
 def get_callbacks(path2save, fname, learning_rate_drop=None, learning_rate_patience=50):
     model_checkpoint_best = ModelCheckpoint(os.path.join(path2save, f'best_{fname}.h5'), save_best_only=True)
-    tensorboard = TensorBoard(log_dir= os.path.join(path2save, "/logs"))
+    tensorboard = TensorBoard(log_dir= os.path.join(path2save, "logs"))
     if learning_rate_drop:
         patience = ReduceLROnPlateau(factor=learning_rate_drop, patience=learning_rate_patience, verbose=1)
         return [model_checkpoint_best, tensorboard, patience]
@@ -77,7 +77,7 @@ for contrast in ['t2', 't2s']:
             os.mkdir(os.path.join(model_dir, model_save_name))
     else:
         model_save_name = contrast      
-         if not os.path.isdir(os.path.join(model_dir, model_save_name)):
+        if not os.path.isdir(os.path.join(model_dir, model_save_name)):
             os.mkdir(os.path.join(model_dir, model_save_name)) 
     
     # Load the whole set of preprocessed data.

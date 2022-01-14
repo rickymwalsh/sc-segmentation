@@ -43,11 +43,11 @@ def crop_images(im_image, im_lesion, contrast, crop_size=48):
 
 def extract_patches(im_data, patch_size, patch_overlap=0.0):
 	z_patch_size = patch_size[2]
-	z_step_keep = list(range(0, im_data.shape[2], z_patch_size*(1-patch_overlap)))
+	z_step_keep = list(range(0, im_data.shape[2], int(z_patch_size*(1-patch_overlap))))
 	patch_arr = np.empty([len(z_step_keep)] + list(patch_size))
 
 	for i,zz in enumerate(z_step_keep):
-		if zz == z_step_keep[-1]:  # deal with instances where the im.data.shape[2] % patch_size_z != 0
+		if (im_data.shape[2] - zz) < z_patch_size :  # deal with instances where the im.data.shape[2] % patch_size_z != 0
 			patch_im = np.zeros(patch_size)
 			z_patch_extracted = im_data.shape[2] - zz
 			patch_im[:, :, :z_patch_extracted] = im_data[:, :, zz:]
@@ -92,7 +92,7 @@ def main():
 	# 	Save combined processed patches to .npz
 
 	for subset in data_split:
-		patch_overlap == 0.0 if subset == 'test' else config['patch_overlap']
+		patch_overlap = 0.0 if subset == 'test' else config['patch_overlap']
 		for contrast in ['t2','t2s']:
 			print(f'Processing {subset} ({contrast}) data')
 			im_patches = []; lesion_patches = []

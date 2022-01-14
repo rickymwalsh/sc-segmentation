@@ -130,12 +130,12 @@ def retrieve_data_split(data_id):
 def generate_predictions(model_id, data_split, adapted=False):
     for model_contrast in ['t2', 't2s']:
         if model_id=='sct':
-            model = load_trained_model(os.path.join('sct_deepseg_lesion_models', f'{contrast}_lesion.h5'))
+            model = load_trained_model(os.path.join('sct_deepseg_lesion_models', f'{model_contrast}_lesion.h5'))
         elif adapted:
             opposite_contrast = 't2s' if model_contrast=='t2' else 't2s'
-            model = load_trained_model(os.path.join('models', 'adapted', model_id, f'{opposite_contrast}_to_{contrast}', f'best_{opposite_contrast}_to_{contrast}.h5'))            
+            model = load_trained_model(os.path.join('models', 'adapted', model_id, f'{opposite_contrast}_to_{model_contrast}', f'best_{opposite_contrast}_to_{model_contrast}.h5'))            
         else:
-            model = load_trained_model(os.path.join('models', 'finetuned', model_id, contrast, f'best_{contrast}.h5'))
+            model = load_trained_model(os.path.join('models', 'finetuned', model_id, contrast, f'best_{model_contrast}.h5'))
 
         # We want to also test the t2 model on the t2s data for example, so need all 4 variations of model_contrast->data_contrast
         for data_contrast in ['t2','t2s']:
@@ -164,7 +164,7 @@ def compute_scores(model_id, data_split):
 
             for data_contrast in ['t2','t2s']:
                 # Read in the ground truth image for this subject for the relevant contrast.
-                gt_path = add_suffix(data_split[subset][subj]['lesion_path'], f'_crop_{contrast}')
+                gt_path = add_suffix(data_split[subset][subj]['lesion_path'], f'_crop_{data_contrast}')
                 gt = Image(gt_path).data.astype(np.uint8)
 
                 for model_contrast in ['t2','t2s']:
@@ -278,10 +278,11 @@ def main():
         .agg([
             np.nanmedian, 
             lambda x: x.quantile(q=0.25),
-            lambda x: x.quantile(q=0.75)]) \
-        .T 
+            lambda x: x.quantile(q=0.75)])# \
+       # .T 
 
-    summary_stats.columns = ['median', 'q25', 'q75']
+    print(summary_stats.head())
+    summary_stats.columns = ['subset', 'median', 'q25', 'q75']
 
     summary_stats = summary_stats \
         .append(subj_specificity) \
