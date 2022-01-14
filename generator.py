@@ -54,10 +54,10 @@ def add_data(x_list, y_list, data_file, index, augment=False, augment_flip=True)
 
     if augment:
         data, truth = augment_data(data, truth, flip=augment_flip)
-#        if random_boolean():
-#            data, truth = random_shift_image(data, truth, 10)
-#        if random_boolean():
-#            data, truth = random_rotate_image(data, truth, 20)
+       if random_boolean():
+           data, truth = random_shift_image(data, truth, max_offset=10)
+       if random_boolean():
+           data, truth = random_rotate_image(data, truth, max_angle=20)
         
     truth = truth[np.newaxis]
 
@@ -72,13 +72,17 @@ def flip_image(image, axis):
     return new_data
 
 def random_shift_image(image, gt, max_offset):
-    offset = np.random.randint(-max_offset, high=max_offset+1, size=2, dtype=int)
+    # 99.7% of data lies within 3 standard deviations from the mean.
+    sd = max_offset/3.0
+    offset = int(np.random.normal(scale=sd, size=2))
 
-    return shift(image, (0, offset[0], offset[1], 0), order=0, mode='nearest'), shift(gt, (offset[0], offset[1], 0), order=0, mode='nearest')
+    return shift(image, (0, offset[0], offset[1], 0), order=0), shift(gt, (offset[0], offset[1], 0), order=0)
 
 
 def random_rotate_image(image, gt, max_angle):
-    angle = np.random.randint(-max_angle, high=max_angle+1, size=1, dtype=int)[0]
+    # 99.7% of data lies within 3 standard deviations from the mean.
+    sd = max_angle/3.0
+    angle = np.random.normal(scale=sd, size=2)
     
     return rotate(image, angle, reshape=False, order=0), rotate(gt, angle, reshape=False, order=0)
 
