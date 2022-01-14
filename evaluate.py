@@ -277,6 +277,9 @@ def main():
     def q3(x): return x.quantile(q=0.75)
     def IQR(x): return q3(x) - q1(x)
 
+    df['subset'] = np.where(df['subset']=='test' & df['t2-model_t2-data.nlesions_gt']==0, 'test_no_lesions',
+                        np.where(df['subset']=='test', 'test_lesions',
+                            df['subset'])
 
     summary_stats = df \
         .drop(columns=['subject','t2-model_t2-data.true_negative', 't2-model_t2s-data.true_negative', \
