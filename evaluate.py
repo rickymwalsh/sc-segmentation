@@ -25,28 +25,21 @@ from spinalcordtoolbox.spinalcordtoolbox.deepseg_sc.cnn_models_3d import load_tr
 from preprocessing import normalize_data, crop_images, extract_patches
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-model_id", type=str, help="The id of the model to be evaluated (same as its folder name).")
-parser.add_argument("-adapted", type=0, help="Whether we are evaluating a domain-adapted model (1) or a regular fine-tuned model (0).")
+parser.add_argument("-model_id", type=str, help="The id of the model to be evaluated (same as its folder name). To evaluate original SCT models set model_id='sct'. ")
+parser.add_argument("-adapted", type=int, default=0, help="Whether we are evaluating a domain-adapted model (1) or a regular fine-tuned model (0).")
 parser.add_argument("-results_from_file", default=1, type=int, help="Set to 1 if the scores.json file already exists and we want to just calculate summary statistics. \
                                                                     Set to 0 if the segmentations and subject scores need to be generated.")
+parser.add_argument("-preprocessed_data", default=None, type=str, help="If the original SCT models are being evaluated, we need to know which data split to use: The timestamp/ID associated with the relevant preprocessed data.")
 args = parser.parse_args()
 
 results_from_file = args.results_from_file
 model_id = args.model_id
 adapted = args.adapted
+preprocessed_data_sct = args.preprocessed_data
 
 def dice_coefficient(lesion_gt, lesion_seg):
-    """ Returns the Dice coefficient for one subject given the ground truth lesion mask and segmentation mask for that subject. """
-
-    # If both the ground truth mask and automated segmentation mask contain no positive (lesion) voxels, 
-    # the function will throw an error (division by zero). So first check that this is not the case.
-    if any(lesion_seg.ravel()) | any(lesion_gt.ravel()):
-        # the dice function gives Dice dissimilarity - subtract from 1 to the get the Dice coefficient.
-        return 1-dice(lesion_gt.ravel(), lesion_seg.ravel())
-    # If neither mask contains any lesion pixels, this is a good result - the model has not returned a false positive lesion.
-    # Thus, return the maximum Dice coefficient score of 1.
-    else:
-        return 1
+    # the dice function gives Dice dissimilarity - subtract from 1 to the get the Dice coefficient.
+    return 1-dice(lesion_gt.ravel(), lesion_seg.ravel())
 
 def voxel_sensitivity(lesion_gt, lesion_seg):
     return recall_score(lesion_gt.ravel(), lesion_seg.ravel())
@@ -62,8 +55,14 @@ def lesion_sensitivity(lesion_gt, lesion_seg):
     labels_gt = measure.label(lesion_gt)  # Numbers the connected regions (1, 2, 3, etc.)
 
     # Get the unique ground truth lesions (connected regions) and how many voxels each one covers.
-    labels, count = np.unique(labels_gt, return_counts=True)
-    labels_overlap, count_overlap = np.unique(labels_gt*lesion_seg, return_counts=True)
+    labels, count = np.unique(labels_gt[labels_gt>0], return_counts=True)
+    # Get the overlap between the ground truth lesions and the model's segmentation.
+    seg_overlap = labels_gt*lesion_seg
+    # If there is no overlap, return a sensitivity of 0.
+    if np.max(seg_overlap) == 0:
+        return 0.0, len(labels)
+    # Get the unique lesions in the overlapping regions as well as the number of voxels each one covers.
+    labels_overlap, count_overlap = np.unique(seg_overlap[seg_overlap>0], return_counts=True)
 
     detected = 0.0
     # Loop over the distinct ground truth lesions. If part of this lesion is present in the segmentation mask, 
@@ -85,9 +84,14 @@ def lesion_precision(lesion_gt, lesion_seg):
     labels_seg = measure.label(lesion_seg)  # Numbers the connected regions (1, 2, 3, etc.)
 
     # Get the unique lesions (connected regions) in the automatic segmentation and how many voxels each one covers.
-    labels, count = np.unique(labels_seg, return_counts=True)
+    labels, count = np.unique(labels_seg[labels_seg>0], return_counts=True)
     # Get the overlap between the segmentation labels and the ground truth mask.
-    labels_overlap, count_overlap = np.unique(labels_seg*lesion_gt, return_counts=True)
+    seg_overlap = labels_seg*lesion_gt
+    # If there is no overlap, return a precision of 0.
+    if np.max(seg_overlap) == 0:
+        return 0.0, len(labels)
+    # Get the unique lesions in the overlapping regions as well as the number of voxels each one covers.
+    labels_overlap, count_overlap = np.unique(seg_overlap[seg_overlap>0], return_counts=True)
 
     TP = 0.0
     # Loop over the distinct segmentation lesions. If part of this lesion was present in the ground truth mask, 
@@ -123,23 +127,31 @@ def retrieve_data_split(data_id):
 
     return data_split
 
-def generate_predictions(model_id, data_split):
-    for contrast in ['t2', 't2s']:
-        model = load_trained_model(os.path.join('models', 'finetuned', model_id, contrast, f'best_{contrast}.h5'))
+def generate_predictions(model_id, data_split, adapted=False):
+    for model_contrast in ['t2', 't2s']:
+        if model_id=='sct':
+            model = load_trained_model(os.path.join('sct_deepseg_lesion_models', f'{contrast}_lesion.h5'))
+        elif adapted:
+            opposite_contrast = 't2s' if model_contrast=='t2' else 't2s'
+            model = load_trained_model(os.path.join('models', 'adapted', model_id, f'{opposite_contrast}_to_{contrast}', f'best_{opposite_contrast}_to_{contrast}.h5'))            
+        else:
+            model = load_trained_model(os.path.join('models', 'finetuned', model_id, contrast, f'best_{contrast}.h5'))
 
-        # Loop through the subsets (training_t2, training_t2s, validation, test)
-        for subset,subdict in data_split.items():
-            for subj,values in subdict.items():
-                seg_im = get_prediction(model, values[f'{contrast}_path'], contrast)
+        # We want to also test the t2 model on the t2s data for example, so need all 4 variations of model_contrast->data_contrast
+        for data_contrast in ['t2','t2s']:
+            # Loop through the subsets (training_t2, training_t2s, validation, test)
+            for subset,subdict in data_split.items():
+                for subj,values in subdict.items():
+                    seg_im = get_prediction(model, values[f'{data_contrast}_path'], model_contrast)
 
-                seg_dir = os.path.join('data','SCSeg',subj,'segmentation')
-                model_dir = os.path.join(seg_dir, model_id)
-                if not os.path.isdir(model_dir):
-                    if not os.path.isdir(seg_dir):
-                        os.mkdir(seg_dir)
-                    os.mkdir(model_dir)
+                    seg_dir = os.path.join('data','SCSeg',subj,'segmentation')
+                    model_dir = os.path.join(seg_dir, model_id)
+                    if not os.path.isdir(model_dir):
+                        if not os.path.isdir(seg_dir):
+                            os.mkdir(seg_dir)
+                        os.mkdir(model_dir)
 
-                seg_im.save(os.path.join(model_dir, contrast + '.nii.gz'))
+                    seg_im.save(os.path.join(model_dir,  f'{model_contrast}-model_{data_contrast}-data.nii.gz'))
 
 
 def compute_scores(model_id, data_split):
@@ -148,67 +160,76 @@ def compute_scores(model_id, data_split):
 
     for subset in data_split:
         for subj in tqdm(data_split[subset]):
-            scores[subj] = {'subset':subset, 't2':{}, 't2s':{}}
+            scores[subj] = {'subset':subset} # Create a new sub-dict for each subject.
 
-            for contrast in ['t2','t2s']:
-
-                seg_path = os.path.join('data','SCSeg',subj,'segmentation',model_id, f'{contrast}.nii.gz')
+            for data_contrast in ['t2','t2s']:
+                # Read in the ground truth image for this subject for the relevant contrast.
                 gt_path = add_suffix(data_split[subset][subj]['lesion_path'], f'_crop_{contrast}')
-
-                seg = Image(seg_path).data.astype(np.uint8)
                 gt = Image(gt_path).data.astype(np.uint8)
 
-                res_tmp = {}
-                res_tmp['dice'] = dice_coefficient(gt, seg)
-                res_tmp['n_lesion_voxels_gt'] = int(np.sum(gt))
-                res_tmp['n_lesion_voxels_seg'] = int(np.sum(seg))
-                res_tmp['total_voxels'] = len(gt.ravel())
-                res_tmp['lesion_load_gt'] = float(res_tmp['n_lesion_voxels_gt'])/res_tmp['total_voxels']
-                res_tmp['lesion_load_seg'] = float(res_tmp['n_lesion_voxels_seg'])/res_tmp['total_voxels']
+                for model_contrast in ['t2','t2s']:
+                    # Read in the segmented image based on the data contrast and the model contrast.
+                    seg_path = os.path.join('data','SCSeg',subj,'segmentation',model_id, f'{model_contrast}-model_{data_contrast}-data.nii.gz')
+                    seg = Image(seg_path).data.astype(np.uint8)
 
-                # Check if there was at least one lesion in the ground truth. Otherwise these metrics don't apply.
-                if np.max(gt):
-                    res_tmp['voxel_sensitivity'] = voxel_sensitivity(gt, seg)
-                    res_tmp['lesion_sensitivity'], res_tmp['nlesions_gt'] = lesion_sensitivity(gt, seg)
-                    # Check if there is at least one lesion returned in the segmentation.
-                    if np.max(seg):
-                        res_tmp['voxel_precision'] = voxel_precision(gt, seg)
-                        res_tmp['lesion_precision'], res_tmp['nlesions_seg'] = lesion_precision(gt, seg)
-                    else: 
-                        res_tmp['nlesions_seg'] = 0
+                    res_tmp = {}
+                    res_tmp['n_lesion_voxels_gt'] = int(np.sum(gt))
+                    res_tmp['n_lesion_voxels_seg'] = int(np.sum(seg))
+                    res_tmp['total_voxels'] = len(gt.ravel())
+                    res_tmp['lesion_load_gt'] = float(res_tmp['n_lesion_voxels_gt'])/res_tmp['total_voxels']
+                    res_tmp['lesion_load_seg'] = float(res_tmp['n_lesion_voxels_seg'])/res_tmp['total_voxels']
+
+                    # Check if there was at least one lesion in the ground truth. Otherwise these metrics don't apply.
+                    if np.max(gt):
+                        res_tmp['dice'] = dice_coefficient(gt, seg)
+
+                        res_tmp['voxel_sensitivity'] = voxel_sensitivity(gt, seg)
+                        res_tmp['lesion_sensitivity'], res_tmp['nlesions_gt'] = lesion_sensitivity(gt, seg)
+                        # Check if there is at least one lesion returned in the segmentation.
+                        if np.max(seg):
+                            res_tmp['voxel_precision'] = voxel_precision(gt, seg)
+                            res_tmp['lesion_precision'], res_tmp['nlesions_seg'] = lesion_precision(gt, seg)
+                        else: 
+                            res_tmp['nlesions_seg'] = 0
 
 
-                # If there is no lesion in the Ground Truth segmentation file.
-                else:
-                    # Record the number of lesions as zero.
-                    res_tmp['nlesions_gt'] = 0
-
-                    # Check if there is at least one lesion returned by the segmentation.
-                    if np.max(seg):
-                        _, res_tmp['nlesions_seg'] = measure.label(seg, return_num=True)
-                        res_tmp['true_negative'] = 0  # Used to calculate subject-wise specificity
-
+                    # If there is no lesion in the Ground Truth segmentation file.
                     else:
-                        res_tmp['nlesions_seg'] = 0
-                        res_tmp['true_negative'] = 1  # Used to calculate subject-wise specificity
+                        # Record the number of lesions as zero.
+                        res_tmp['nlesions_gt'] = 0
 
-                scores[subj][contrast] = deepcopy(res_tmp)
+                        # Check if there is at least one lesion returned by the segmentation.
+                        if np.max(seg):
+                            _, res_tmp['nlesions_seg'] = measure.label(seg, return_num=True)
+                            res_tmp['true_negative'] = 0  # Used to calculate subject-wise specificity
+
+                        else:
+                            res_tmp['nlesions_seg'] = 0
+                            res_tmp['true_negative'] = 1  # Used to calculate subject-wise specificity
+
+                    scores[subj][f'{model_contrast}-model_{data_contrast}-data'] = deepcopy(res_tmp)
 
     return scores
 
 
 def main():
 
-    if adapted:
-        model_dir = os.path.join('models', 'adapted', model_id)
+    if model_id=='sct':
+        # If the SCT models are to be evaluated, the relevant data to be used should be supplied when calling the script.
+        data_id = preprocessed_data_sct
+
     else:
-        model_dir = os.path.join('models', 'finetuned', model_id)
+        if adapted:
+            model_dir = os.path.join('models', 'adapted', model_id)
+        else:
+            model_dir = os.path.join('models', 'finetuned', model_id)
 
-    # Retrieve the relevant train-test-split used for this model.
-    with open(os.path.join(model_dir, 'config.json'), 'r') as f:
-        config = json.load(f)
+        with open(os.path.join(model_dir, 'config.json'), 'r') as f:
+            config = json.load(f)
+        # Retrieve the relevant file name containing the data split used to train the model.
+        data_id = config['preprocessed_data_file']
 
-    data_id = config['preprocessed_data_file']
+    # Read the dict containing the subject IDs and data in the train/valid/test sets.
     data_split = retrieve_data_split(data_id)
 
     # Create a directory for the model results
@@ -241,15 +262,18 @@ def main():
 
     df.to_csv(os.path.join(results_dir, 'subject_scores.csv'), index=False)
 
-    subj_specificity = df[['t2.true_negative', 't2s.true_negative']] \
+    subj_specificity = df[['t2-model_t2-data.true_negative', 't2-model_t2s-data.true_negative', 't2s-model_t2-data.true_negative', 't2s-model_t2s-data.true_negative']] \
         .mean(skipna=True) \
         .to_frame(name='specificity') \
         .rename({
-            't2.true_negative': 't2.subject_specificity',
-            't2s.true_negative': 't2s.subject_specificity'
+            't2-model_t2-data.true_negative': 't2-model_t2-data.subject_specificity',
+            't2-model_t2s-data.true_negative': 't2-model_t2s-data.subject_specificity',
+            't2s-model_t2-data.true_negative': 't2s-model_t2-data.subject_specificity',
+            't2s-model_t2s-data.true_negative': 't2s-model_t2s-data.subject_specificity'
             }) 
 
-    summary_stats = df.drop(columns=['subject','t2.true_negative', 't2s.true_negative'],axis=1) \
+    summary_stats = df.drop(columns=['subject','t2-model_t2-data.true_negative', 't2-model_t2s-data.true_negative', \
+                                    't2s-model_t2-data.true_negative', 't2s-model_t2s-data.true_negative'], axis=1) \
         .groupby(by='subset') \
         .agg([
             np.nanmedian, 
@@ -265,7 +289,7 @@ def main():
 
     summary_stats['IQR'] = summary_stats['q75'] - summary_stats['q25']
 
-    summary_stats[['model', 'data', 'metric']] = summary_stats['index'].str.split('.', 2, expand=True)
+    summary_stats[['model-data', 'metric']] = summary_stats['index'].str.split('.', 2, expand=True)
 
     summary_stats.to_csv(os.path.join(results_dir, 'summary_stats.csv'), index=False)
 
