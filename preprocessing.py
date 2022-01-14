@@ -41,9 +41,9 @@ def crop_images(im_image, im_lesion, contrast, crop_size=48):
 
     return im_crop_nii, lesion_crop
 
-def extract_patches(im_data, patch_size):
+def extract_patches(im_data, patch_size, patch_overlap=0.0):
 	z_patch_size = patch_size[2]
-	z_step_keep = list(range(0, im_data.shape[2], z_patch_size))
+	z_step_keep = list(range(0, im_data.shape[2], z_patch_size*(1-patch_overlap)))
 	patch_arr = np.empty([len(z_step_keep)] + list(patch_size))
 
 	for i,zz in enumerate(z_step_keep):
@@ -92,6 +92,7 @@ def main():
 	# 	Save combined processed patches to .npz
 
 	for subset in data_split:
+		patch_overlap == 0.0 if subset == 'test' else config['patch_overlap']
 		for contrast in ['t2','t2s']:
 			print(f'Processing {subset} ({contrast}) data')
 			im_patches = []; lesion_patches = []
@@ -125,8 +126,8 @@ def main():
 				im_cropped.data = normalize_data(im_cropped.data, contrast)
 
 				# Extract the individual patches.
-				im_patches.append(extract_patches(im_cropped.data, patch_size))
-				lesion_patches.append(extract_patches(lesion_cropped.data, patch_size))
+				im_patches.append(extract_patches(im_cropped.data, patch_size, patch_overlap))
+				lesion_patches.append(extract_patches(lesion_cropped.data, patch_size, patch_overlap))
 
 			# Combine the list of patches
 			im_patches = np.concatenate(im_patches)
