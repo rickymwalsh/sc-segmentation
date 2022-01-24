@@ -247,14 +247,12 @@ def main():
 
     scores = [{"subject":subj, 'results':values} for subj, values in scores.items()]
 
-    df = pd.json_normalize(scores)
+    df = pd.json_normalize(scores) # Convert from dict to pandas DF
     df.columns = df.columns.str.replace('results.', '', regex=False)
 
-    print(df.columns)
-    print(df.head())
+    df.to_csv(os.path.join(results_dir, 'subject_scores.csv'), index=False) # Write subject results to file.
 
-    df.to_csv(os.path.join(results_dir, 'subject_scores.csv'), index=False)
-
+    # Calculate the specicifity by taking the average of the true negatives (vs. false positives)
     subj_specificity = df[df['subset']=='test']  \
         .filter(['t2-model_t2-data.true_negative', 't2-model_t2s-data.true_negative', 't2s-model_t2-data.true_negative', 't2s-model_t2s-data.true_negative'], axis=1) \
         .mean(skipna=True) \
@@ -267,17 +265,17 @@ def main():
         .reset_index() \
         .rename({'index':'level_0'}, axis=1)
 
-    print(subj_specificity.head())
-
     # Define custom aggregation functions.
     def q1(x): return x.quantile(q=0.25)
     def q3(x): return x.quantile(q=0.75)
     def IQR(x): return q3(x) - q1(x)
 
+    # Take only the test set with lesions for calculating the summary stats.
     df['subset'] = np.where((df['subset']=='test') & (df['t2-model_t2-data.nlesions_gt']==0), 'test_no_lesions',
                         np.where(df['subset']=='test', 'test_lesions',
                             df['subset']))
 
+    # Calculate the summary stats.
     summary_stats = df \
         .drop(columns=['subject','t2-model_t2-data.true_negative', 't2-model_t2s-data.true_negative', \
                         't2s-model_t2-data.true_negative', 't2s-model_t2s-data.true_negative'], axis=1) \
@@ -285,18 +283,19 @@ def main():
         .agg([np.nanmedian, q1, q3, IQR]) \
         .T  
 
+    # Add the specificity scores.
     summary_stats = summary_stats.reset_index() \
             .append(subj_specificity) \
             .rename({'level_1':'measure'}, axis=1)    
     
+    # Split identifier column into multiple columns.
     summary_stats[['model--data', 'metric']] = summary_stats['level_0'].str.split('.', 2, expand=True)
     summary_stats[['model','data']] = summary_stats['model--data'].str.split('_',2, expand=True)
 
+    # Write to csv.
     summary_stats \
             .drop(columns=['level_0','model--data'], axis=1) \
             .to_csv(os.path.join(results_dir, 'summary_stats.csv'), index=False)
-
-    print(summary_stats.head())
 
 if __name__=="__main__":
     main()
