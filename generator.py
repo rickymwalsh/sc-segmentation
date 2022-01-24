@@ -1,3 +1,5 @@
+# Code adapted from https://github.com/sct-pipeline/deepseg-training
+
 import os
 from random import shuffle
 import sys

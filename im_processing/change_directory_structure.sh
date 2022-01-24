@@ -2,7 +2,7 @@
 # Loop over each subject directory, and tidy up the directories.
 # This was needed since all of the processing had been done before deciding on the optimal directory structure, 
 # but the updated processing code should take care of this from the start.
-cd data/SCSeg
+cd ../data/SCSeg
 for directory in ./* ; do
 	echo "${directory}"
 	cd "${directory}";

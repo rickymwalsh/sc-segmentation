@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Oct 29 12:46:19 2021
-
-@author: Ricky
-"""
+# Code written before final pipeline was implemented & so paths may be incorrect.
 
 import os
 import logging

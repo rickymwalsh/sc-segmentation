@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Jan  4 15:06:27 2022
-
-@author: Ricky
-"""
-
 import numpy as np
 from scipy.spatial.distance import dice
 from sklearn.metrics import recall_score, precision_score
